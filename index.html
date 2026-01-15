@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Organizador de BMs — Online + Programação</title>
+  <title>Organizador — Online (BMs + Programação)</title>
   <style>
     :root{
       --bg:#0b1220;
+      --panel:#0f1a2e;
       --text:#e7eefc;
       --muted:#a9b6d3;
       --line:rgba(255,255,255,.10);
@@ -20,7 +21,7 @@
       --chip:#1a2a49;
       --focus:0 0 0 3px rgba(79,156,255,.25);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -34,7 +35,7 @@
       color:var(--text);
     }
     button, input, select, textarea{font:inherit;color:inherit}
-    .app{max-width:1450px;margin:0 auto;padding:18px 16px 28px;}
+    .app{max-width:1500px;margin:0 auto;padding:18px 16px 28px;}
     .topbar{
       display:flex;gap:12px;align-items:center;justify-content:space-between;
       padding:14px 14px;
@@ -44,7 +45,7 @@
       box-shadow: var(--shadow);
       position: sticky; top: 0; backdrop-filter: blur(8px); z-index: 5;
     }
-    .brand{display:flex;gap:12px;align-items:center;min-width:260px;}
+    .brand{display:flex;gap:12px;align-items:center;min-width:240px;}
     .logo{
       width:42px;height:42px;border-radius:14px;
       background: linear-gradient(135deg, rgba(79,156,255,.95), rgba(79,156,255,.25));
@@ -55,21 +56,19 @@
     .title b{font-size:15px;letter-spacing:.2px}
     .title span{font-size:12px;color:var(--muted)}
     .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-    .pill{
-      display:flex; gap:8px; align-items:center;
-      background: rgba(255,255,255,.04);
-      border:1px solid var(--line);
-      padding:10px 10px; border-radius: 999px;
-    }
-    .pill input{border:0;outline:0;background:transparent;min-width:240px;}
     .btn{
       border:1px solid var(--line);
       background: rgba(255,255,255,.05);
-      padding:10px 12px;border-radius:999px;cursor:pointer;transition:.15s ease;
-      display:inline-flex;gap:8px;align-items:center;white-space:nowrap;
+      padding:10px 12px;
+      border-radius:999px;
+      cursor:pointer;
+      transition:.15s ease;
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      white-space:nowrap;
     }
     .btn:hover{transform:translateY(-1px); background: rgba(255,255,255,.08)}
-    .btn:active{transform:translateY(0px)}
     .btn:disabled{opacity:.45; cursor:not-allowed; transform:none}
     .btn.primary{
       background: linear-gradient(135deg, rgba(79,156,255,.92), rgba(79,156,255,.35));
@@ -79,27 +78,31 @@
     .btn.danger{
       background: linear-gradient(135deg, rgba(255,91,91,.9), rgba(255,91,91,.25));
       border:1px solid rgba(255,91,91,.55);
-      box-shadow: 0 10px 24px rgba(255,91,91,.14);
     }
-    .btn.ghost{background:transparent;}
     .tabs{
-      display:flex;gap:8px;align-items:center;
+      display:flex; gap:8px; align-items:center;
       background: rgba(255,255,255,.04);
       border:1px solid var(--line);
-      padding:6px;border-radius:999px;
+      padding:6px;
+      border-radius:999px;
     }
-    .tab{border:0;background:transparent;padding:9px 12px;border-radius:999px;cursor:pointer;color:var(--muted)}
+    .tab{
+      border:0;background:transparent;padding:9px 12px;border-radius:999px;
+      cursor:pointer;color:var(--muted)
+    }
     .tab.active{background: rgba(255,255,255,.08);color: var(--text);border:1px solid rgba(255,255,255,.10)}
-    .statuspill{
-      display:flex;gap:8px;align-items:center;
+    .pill{
+      display:flex; gap:8px; align-items:center;
       background: rgba(255,255,255,.04);
       border:1px solid rgba(255,255,255,.10);
-      padding:8px 10px;border-radius:999px;font-size:12px;color:var(--muted);
+      padding:10px 10px;
+      border-radius:999px;
+      color: var(--muted);
+      font-size:12px;
     }
-    .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.25);}
-    .dot.good{background:var(--good)}
-    .dot.bad{background:var(--bad)}
-    .dot.mid{background:var(--mid)}
+    .pill input{border:0;outline:0;background:transparent;color:var(--text);min-width:220px}
+    .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.25)}
+    .dot.good{background:var(--good)} .dot.mid{background:var(--mid)} .dot.bad{background:var(--bad)}
     .content{margin-top:14px;}
     .board{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;}
     .col{
@@ -112,9 +115,7 @@
     }
     .col-header{
       display:flex;align-items:center;justify-content:space-between;gap:10px;
-      padding:6px 4px 10px;
-      border-bottom:1px dashed rgba(255,255,255,.10);
-      margin-bottom:10px;
+      padding:6px 4px 10px;border-bottom:1px dashed rgba(255,255,255,.10);margin-bottom:10px;
     }
     .col-header b{font-size:13px}
     .badge{
@@ -124,11 +125,7 @@
       color: var(--muted);
     }
     .dropzone{min-height:60px;display:flex;flex-direction:column;gap:10px;padding:2px;border-radius: var(--radius2);}
-    .dropzone.dragover{
-      outline: 2px dashed rgba(79,156,255,.55);
-      outline-offset: 4px;
-      background: rgba(79,156,255,.06);
-    }
+    .dropzone.dragover{outline:2px dashed rgba(79,156,255,.55);outline-offset:4px;background:rgba(79,156,255,.06)}
     .card{
       background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
       border:1px solid rgba(255,255,255,.10);
@@ -137,16 +134,15 @@
       box-shadow: 0 10px 20px rgba(0,0,0,.25);
       cursor: grab;
     }
-    .card.readonly{cursor: default;}
-    .card:active{cursor: grabbing}
+    .card.readonly{cursor:default}
     .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
     .bm-id{
-      font-family: var(--mono);font-size: 12px;letter-spacing: .2px;
+      font-family:var(--mono);font-size:12px;letter-spacing:.2px;
       background: rgba(26,42,73,.7);
       border:1px solid rgba(255,255,255,.10);
       padding:6px 8px;border-radius:10px;
       display:inline-flex;gap:8px;align-items:center;
-      max-width: 230px;overflow:hidden;text-overflow: ellipsis;white-space: nowrap;
+      max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
     }
     .meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;}
     .chip{
@@ -158,27 +154,18 @@
     }
     .chip strong{color:var(--text);font-weight:600}
     .qdot{width:8px;height:8px;border-radius:999px;display:inline-block;}
-    .qdot.good{background:var(--good)}
-    .qdot.mid{background:var(--mid)}
-    .qdot.bad{background:var(--bad)}
-    .small{font-size: 12px;color: var(--muted);line-height: 1.35;}
-    .actions{display:flex;gap:8px;align-items:center;}
+    .qdot.good{background:var(--good)} .qdot.mid{background:var(--mid)} .qdot.bad{background:var(--bad)}
+    .small{font-size:12px;color:var(--muted);line-height:1.35;}
     .iconbtn{
       border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.05);
-      width:36px;height:36px;border-radius: 12px;cursor:pointer;
-      display:grid;place-items:center;transition:.15s ease;flex: 0 0 auto;
+      width:36px;height:36px;border-radius:12px;
+      cursor:pointer;display:grid;place-items:center;
     }
-    .iconbtn:hover{background: rgba(255,255,255,.08); transform: translateY(-1px)}
-    .iconbtn:active{transform: translateY(0px)}
-    .iconbtn:disabled{opacity:.45; cursor:not-allowed; transform:none}
-    .warn{color: rgba(255,91,91,.92);font-weight: 600;}
-    .agenda{display:grid;grid-template-columns: 1fr 1fr;gap:12px;}
-    @media (max-width: 980px){
-      .agenda{grid-template-columns: 1fr;}
-      .pill input{min-width:160px}
-      .brand{min-width: 0}
-    }
+    .iconbtn:disabled{opacity:.45; cursor:not-allowed}
+    .warn{color: rgba(255,91,91,.92);font-weight:600;}
+    .grid2{display:grid;grid-template-columns:1.25fr .75fr;gap:12px;}
+    @media(max-width:980px){.grid2{grid-template-columns:1fr}.pill input{min-width:160px}}
     .panel{
       background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
       border:1px solid var(--line);
@@ -186,206 +173,87 @@
       box-shadow: var(--shadow);
       padding: 12px;
     }
-    .panel h3{margin: 6px 0 10px;font-size: 14px;letter-spacing: .2px;}
-    .list{display:flex;flex-direction:column;gap:10px;}
-    .row{
-      display:flex;gap:10px;align-items:center;justify-content:space-between;
-      padding:10px;border:1px solid rgba(255,255,255,.10);
-      border-radius: var(--radius2);background: rgba(255,255,255,.03);
-    }
-    .row-left{display:flex;flex-direction:column;gap:6px;min-width: 0}
-    .row-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-    .kbd{
-      font-family: var(--mono);
-      font-size: 12px;color: var(--muted);
-      padding: 4px 8px;border-radius: 10px;
-      border:1px solid rgba(255,255,255,.10);background: rgba(255,255,255,.04);
-    }
-
-    /* Programação */
-    .prog-grid{display:grid;grid-template-columns: 1.2fr .8fr;gap:12px;}
-    @media (max-width: 980px){ .prog-grid{grid-template-columns:1fr;} }
-    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .toolbar-left{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .toolbar-right{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
-    .field-inline{
-      display:flex;gap:8px;align-items:center;
-      background: rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.10);
-      padding:8px 10px;border-radius:999px;
-      color: var(--muted);font-size:12px;
-    }
-    .field-inline input{
-      border:0;outline:0;background:transparent;color:var(--text);
-      font-size:12px;
-    }
+    .panel h3{margin:6px 0 10px;font-size:14px;letter-spacing:.2px}
+    .hr{height:1px;background:rgba(255,255,255,.08);margin:10px 0}
     .table{
       width:100%;
-      border-collapse:separate;
-      border-spacing:0;
-      overflow:hidden;
-      border:1px solid rgba(255,255,255,.10);
-      border-radius: 14px;
-      background: rgba(255,255,255,.03);
+      border-collapse:separate;border-spacing:0;
+      overflow:hidden;border:1px solid rgba(255,255,255,.10);
+      border-radius: 14px;background: rgba(255,255,255,.03);
     }
-    .table th, .table td{
-      padding:10px 10px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      vertical-align:middle;
-      font-size:12px;
-    }
-    .table th{
-      text-align:left;
-      color: var(--muted);
-      background: rgba(255,255,255,.03);
-      position:sticky;
-      top:0;
-      z-index:1;
-    }
+    .table th,.table td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);font-size:12px;vertical-align:middle}
+    .table th{color:var(--muted);background:rgba(255,255,255,.03);text-align:left;position:sticky;top:0;z-index:1}
     .table tr:last-child td{border-bottom:0}
-    .cell-input{
+    .cell{
       width:100%;
       border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.03);
-      border-radius: 10px;
+      border-radius:10px;
       padding:8px 8px;
       outline:none;
       font-size:12px;
     }
-    .cell-input:focus{box-shadow: var(--focus); border-color: rgba(79,156,255,.55)}
-    .mini{
-      width: 90px;
-    }
-    .mini2{width: 110px;}
-    .nowrap{white-space:nowrap}
-    .trash{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.04);
-      border-radius: 10px;
-      width:36px;height:36px;
-      cursor:pointer;
-    }
-    .trash:hover{background: rgba(255,255,255,.08)}
+    .cell:focus{box-shadow: var(--focus); border-color: rgba(79,156,255,.55)}
+    .cell:disabled{opacity:.55}
     pre.output{
-      margin:0;
-      padding:12px;
-      border:1px solid rgba(255,255,255,.10);
-      border-radius: 14px;
-      background: rgba(0,0,0,.25);
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 12px;
-      line-height: 1.5;
-      min-height: 420px;
-      white-space: pre-wrap;
-      word-break: break-word;
+      margin:0;padding:12px;border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;background:rgba(0,0,0,.25);
+      color:var(--text);font-family:var(--mono);font-size:12px;line-height:1.5;
+      min-height:420px;white-space:pre-wrap;word-break:break-word;
     }
-
-    /* Modals */
-    .modal-backdrop{
-      position:fixed; inset:0;background: rgba(0,0,0,.55);
-      display:none; place-items:center; z-index: 10; padding: 14px;
-    }
-    .modal-backdrop.open{display:grid}
-    .modal{
-      width:min(980px, 100%);
-      background: linear-gradient(180deg, rgba(16,31,54,.98), rgba(15,26,46,.98));
-      border:1px solid rgba(255,255,255,.14);
-      border-radius: 18px;
-      box-shadow: 0 28px 70px rgba(0,0,0,.55);
-      overflow:hidden;
-    }
-    .modal.sm{width:min(720px, 100%);}
-    .modal-header{
-      padding:14px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;
-      border-bottom:1px solid rgba(255,255,255,.10);background: rgba(255,255,255,.03);
-    }
-    .modal-header b{font-size:14px}
-    .modal-body{
-      padding:14px;display:grid;grid-template-columns: 1.15fr .85fr;gap:12px;
-    }
-    .modal-body.one{grid-template-columns:1fr;}
-    @media (max-width: 920px){ .modal-body{grid-template-columns: 1fr;} }
-    .field{
-      display:flex;flex-direction:column;gap:6px;
-      padding:10px;border:1px solid rgba(255,255,255,.10);
-      border-radius: 14px;background: rgba(255,255,255,.03);
-    }
-    .field label{font-size:12px; color: var(--muted)}
-    .field input,.field select,.field textarea{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
-      border-radius: 12px;
-      padding:10px 10px;
-      outline: none;
-    }
-    .field input:focus,.field select:focus,.field textarea:focus{box-shadow: var(--focus); border-color: rgba(79,156,255,.55)}
-    textarea{min-height:140px; resize: vertical}
-    .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:12px}
-    @media (max-width: 520px){ .grid2{grid-template-columns:1fr} }
-    .modal-footer{
-      padding:14px;display:flex;justify-content:space-between;gap:10px;
-      border-top:1px solid rgba(255,255,255,.10);background: rgba(255,255,255,.02);
-      flex-wrap:wrap;
-    }
-    .hint{font-size:12px; color: var(--muted)}
-    .hr{height:1px; background: rgba(255,255,255,.08); margin: 10px 0}
     .toast{
       position:fixed;right:16px;bottom:16px;
       background: rgba(20,34,60,.92);
       border:1px solid rgba(255,255,255,.14);
       color: var(--text);
-      padding:10px 12px;border-radius: 14px;
+      padding:10px 12px;border-radius:14px;
       box-shadow: var(--shadow);
-      display:none;max-width: 560px;z-index: 20;
+      display:none;max-width:560px;z-index:20;
     }
     .toast.show{display:block}
-    .mono{font-family: var(--mono)}
-    .muted{color: var(--muted)}
+    /* Modal */
+    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:50;padding:14px}
+    .backdrop.open{display:grid}
+    .modal{width:min(980px,100%);background:linear-gradient(180deg, rgba(16,31,54,.98), rgba(15,26,46,.98));
+      border:1px solid rgba(255,255,255,.14);border-radius:18px;box-shadow:0 28px 70px rgba(0,0,0,.55);overflow:hidden}
+    .modal-header{padding:14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
+    .modal-body{padding:14px;display:grid;grid-template-columns:1.15fr .85fr;gap:12px}
+    @media(max-width:920px){.modal-body{grid-template-columns:1fr}}
+    .modal-footer{padding:14px;display:flex;justify-content:space-between;gap:10px;border-top:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.02);flex-wrap:wrap}
+    .field{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.03)}
+    .field label{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
   <div class="app">
     <div class="topbar">
       <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
+        <div class="logo"></div>
         <div class="title">
-          <b>Organizador de BMs</b>
-          <span>Leitura x Edição + Programação de Disparos (texto padrão)</span>
+          <b>Organizador</b>
+          <span>ONLINE fixo (carrega do /exec) • Leitura padrão • Edição: #edit=1&key=...</span>
         </div>
       </div>
 
       <div class="controls">
-        <div class="tabs" role="tablist" aria-label="Modo">
-          <button class="tab active" id="tabBoard" role="tab" aria-selected="true">Board</button>
-          <button class="tab" id="tabAgenda" role="tab" aria-selected="false">Agenda</button>
-          <button class="tab" id="tabProg" role="tab" aria-selected="false">Programação</button>
+        <div class="tabs">
+          <button class="tab active" id="tabBoard">BMs</button>
+          <button class="tab" id="tabAgenda">Agenda</button>
+          <button class="tab" id="tabProg">Programação</button>
         </div>
 
-        <div class="statuspill" title="Status de sincronização">
-          <span class="dot" id="syncDot"></span>
-          <span id="syncText">Local: editável</span>
+        <div class="pill" title="Status">
+          <span class="dot" id="modeDot"></span>
+          <span id="modeText">Carregando…</span>
         </div>
 
-        <button class="btn" id="btnSettings">⚙️ Online</button>
-
-        <div class="pill" title="Buscar por BM, observação ou número">
-          <span style="opacity:.85">🔎</span>
-          <input id="search" placeholder="Buscar (ex: 5768, 'cartão', 'template'...)" />
+        <div class="pill">
+          🔎 <input id="search" placeholder="Buscar..." />
         </div>
 
-        <select id="filterQuality" class="btn" title="Filtrar por qualidade">
-          <option value="">Qualidade: Todas</option>
-          <option value="APROVADO">Aprovado</option>
-          <option value="MEDIA">Qualidade média</option>
-          <option value="BAIXA">Qualidade baixa (risco)</option>
-        </select>
-
-        <button class="btn primary" id="btnAdd">＋ Nova BM</button>
-        <button class="btn" id="btnExport">Exportar</button>
-        <button class="btn" id="btnImport">Importar</button>
-        <input type="file" id="importFile" accept="application/json" style="display:none" />
-        <button class="btn danger" id="btnReset" title="Apaga tudo deste navegador">Limpar</button>
+        <button class="btn primary" id="btnAdd" disabled>＋ Nova BM</button>
+        <button class="btn" id="btnRefresh">Recarregar</button>
+        <button class="btn primary" id="btnSave" disabled>Salvar</button>
       </div>
     </div>
 
@@ -393,78 +261,65 @@
       <!-- BOARD -->
       <div id="viewBoard">
         <div class="board" id="board"></div>
-        <div class="panel" style="margin-top:12px">
-          <h3>Modo Leitura x Modo Edição (como ativar)</h3>
-          <div class="small">
-            • Sem URL de API: <b>modo LOCAL</b> (editável).<br>
-            • Com URL de API e <b>sem chave</b>: <b>somente leitura</b>.<br>
-            • Com URL de API e <b>com chave</b>: <b>modo edição</b> (sincroniza).<br><br>
-            <span class="kbd">Link de edição recomendado (não vai pro servidor):</span>
-            <div class="small" style="margin-top:6px">
-              <span class="mono">.../index.html#api=URL_DA_API&key=SUA_CHAVE&editor=Planejamento</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- AGENDA -->
       <div id="viewAgenda" style="display:none">
-        <div class="agenda">
+        <div class="grid2">
           <div class="panel">
-            <h3>Disparos agendados (por dia)</h3>
-            <div class="small">Use “Editar” na BM para escolher <b>Data do disparo</b> ou <b>Dia da semana</b>.</div>
+            <h3>Agenda da Programação</h3>
+            <div class="muted">Prioridade: Data • Hora • Quantidade (por carteira).</div>
             <div class="hr"></div>
-            <div id="agendaUpcoming" class="list"></div>
+            <div id="agendaProg"></div>
           </div>
-
           <div class="panel">
-            <h3>Histórico</h3>
-            <div class="small">BMs marcadas como <b>Disparado</b> aparecem aqui.</div>
+            <h3>Agenda de BMs</h3>
+            <div class="muted">Controle paralelo (agendamento das BMs).</div>
             <div class="hr"></div>
-            <div id="agendaDone" class="list"></div>
+            <div id="agendaBms"></div>
           </div>
         </div>
       </div>
 
       <!-- PROGRAMAÇÃO -->
       <div id="viewProg" style="display:none">
-        <div class="prog-grid">
+        <div class="grid2">
           <div class="panel">
-            <div class="toolbar">
-              <div class="toolbar-left">
-                <div class="field-inline">
-                  <span>📅 Data:</span>
-                  <input id="progDate" type="date" />
+            <div class="controls" style="justify-content:space-between;margin-bottom:10px">
+              <div class="controls" style="justify-content:flex-start">
+                <div class="pill"><span>📅</span><input id="progDate" type="date" style="min-width:140px" /></div>
+                <div class="pill">
+                  <span>📌</span>
+                  <select id="progBucket" style="border:0;outline:0;background:transparent;color:var(--text)">
+                    <option value="GBR_CLT">GBR CLT</option>
+                    <option value="GBR_NOVO">GBR NOVO</option>
+                    <option value="3P_CLT">3P CLT</option>
+                    <option value="3PORT">3PORT</option>
+                  </select>
                 </div>
-                <button class="btn" id="btnAddLine">＋ Linha</button>
-                <button class="btn" id="btnImportText">Importar texto</button>
+                <button class="btn" id="btnAddLine" disabled>＋ Linha</button>
+                <button class="btn" id="btnImport" disabled>Importar texto</button>
               </div>
-              <div class="toolbar-right">
-                <span class="kbd" id="progTotals">0 linhas • 0 disparos</span>
+              <div class="controls">
+                <span class="chip" id="totals"><strong>0</strong> linhas • <strong>0</strong> disparos</span>
                 <button class="btn primary" id="btnGenerate">Gerar texto</button>
                 <button class="btn" id="btnCopy">Copiar</button>
               </div>
             </div>
 
-            <div style="max-height:520px; overflow:auto; border-radius:14px;">
-              <table class="table" aria-label="Tabela de programação">
+            <div style="max-height:520px;overflow:auto;border-radius:14px">
+              <table class="table">
                 <thead>
                   <tr>
-                    <th style="width:220px">Operador</th>
+                    <th style="width:180px">Operador</th>
                     <th style="width:140px">4 dígitos</th>
-                    <th style="width:120px">Qtd</th>
+                    <th style="width:110px">Qtd</th>
                     <th style="width:140px">Hora</th>
-                    <th style="width:90px" class="nowrap">Ação</th>
+                    <th style="width:70px">Ação</th>
                   </tr>
                 </thead>
                 <tbody id="progBody"></tbody>
               </table>
-            </div>
-
-            <div class="small" style="margin-top:10px">
-              Formato gerado (igual seu padrão):<br>
-              <span class="mono">MARCOS</span><br>
-              <span class="mono">5768 - 100 (09:30)</span>
             </div>
           </div>
 
@@ -477,187 +332,110 @@
     </div>
   </div>
 
-  <!-- MODAL: BM -->
-  <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <!-- BM Modal -->
+  <div class="backdrop" id="bmBackdrop">
+    <div class="modal">
       <div class="modal-header">
-        <b id="modalTitle">BM</b>
-        <button class="btn ghost" id="btnClose">✕</button>
+        <b id="bmTitle">BM</b>
+        <button class="btn" id="bmClose">✕</button>
       </div>
       <div class="modal-body">
-        <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex;flex-direction:column;gap:12px">
           <div class="field">
-            <label>Identificação da BM (nome / apelido / ID)</label>
-            <input id="fBmId" placeholder="Ex: GBR Joice 2000 | 7436 | BM AILTON" />
+            <label>Identificação da BM</label>
+            <input class="cell" id="fBmId" placeholder="Ex: GBR NOVO - 7436" />
           </div>
-
-          <div class="grid2">
-            <div class="field">
-              <label>Status (coluna)</label>
-              <select id="fColumn"></select>
-            </div>
-            <div class="field">
-              <label>Qualidade</label>
-              <select id="fQuality">
-                <option value="APROVADO">Aprovado</option>
-                <option value="MEDIA">Qualidade média</option>
-                <option value="BAIXA">Qualidade baixa (risco)</option>
-              </select>
-            </div>
-          </div>
-
           <div class="field">
-            <label>Números vinculados (até 10) — um por linha</label>
-            <textarea id="fNumbers" placeholder="Ex:
-11999999999
-11888888888
-..."></textarea>
-            <div class="hint">Contagem: <span id="numbersCount" class="mono">0/10</span></div>
+            <label>Status</label>
+            <select class="cell" id="fColumn">
+              <option value="standby">STAND BY</option>
+              <option value="numeros">NÚMEROS</option>
+              <option value="cartao">CARTÃO</option>
+              <option value="template">TEMPLATE</option>
+              <option value="disparos">DISPAROS</option>
+            </select>
           </div>
-
-          <div class="grid2">
-            <div class="field">
-              <label>Disparo agendado (data)</label>
-              <input id="fDisparoDate" type="date" />
-            </div>
-            <div class="field">
-              <label>Disparo agendado (dia da semana)</label>
-              <select id="fDisparoWeekday">
-                <option value="">—</option>
-                <option value="SEGUNDA">Segunda-feira</option>
-                <option value="TERCA">Terça-feira</option>
-                <option value="QUARTA">Quarta-feira</option>
-                <option value="QUINTA">Quinta-feira</option>
-                <option value="SEXTA">Sexta-feira</option>
-                <option value="SABADO">Sábado</option>
-                <option value="DOMINGO">Domingo</option>
-              </select>
-            </div>
+          <div class="field">
+            <label>Qualidade</label>
+            <select class="cell" id="fQuality">
+              <option value="APROVADO">Aprovado</option>
+              <option value="MEDIA">Qualidade média</option>
+              <option value="BAIXA">Qualidade baixa (risco)</option>
+            </select>
           </div>
-
+          <div class="field">
+            <label>Números (até 10) — um por linha</label>
+            <textarea class="cell" id="fNumbers" placeholder="11999999999&#10;11888888888"></textarea>
+            <div class="muted">Contagem: <span class="mono" id="fNumbersCount">0/10</span></div>
+          </div>
           <div class="field">
             <label>Observações</label>
-            <textarea id="fNotes" placeholder="Ex: aguardando cartão, template em análise, risco, etc."></textarea>
+            <textarea class="cell" id="fNotes"></textarea>
           </div>
         </div>
-
-        <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex;flex-direction:column;gap:12px">
           <div class="field">
-            <label>Data de criação (fica fixa)</label>
-            <input id="fCreatedAt" disabled />
+            <label>Criada em</label>
+            <input class="cell" id="fCreatedAt" disabled />
           </div>
-
           <div class="field">
             <label>Última edição</label>
-            <input id="fUpdatedAt" disabled />
+            <input class="cell" id="fUpdatedAt" disabled />
           </div>
-
           <div class="field">
-            <label>Marcar como “Disparado”</label>
-            <div class="grid2">
-              <label class="btn" style="justify-content:center; gap:10px; cursor:pointer;">
-                <input type="checkbox" id="fIsDone" style="transform:scale(1.15); accent-color: var(--accent);" />
-                <span>Disparado</span>
-              </label>
-              <input id="fDoneAt" type="date" />
+            <label>Agendamento (data)</label>
+            <input class="cell" id="fDisparoDate" type="date" />
+          </div>
+          <div class="field">
+            <label>Agendamento (dia da semana)</label>
+            <select class="cell" id="fDisparoWeekday">
+              <option value="">—</option>
+              <option value="SEGUNDA">Segunda</option>
+              <option value="TERCA">Terça</option>
+              <option value="QUARTA">Quarta</option>
+              <option value="QUINTA">Quinta</option>
+              <option value="SEXTA">Sexta</option>
+              <option value="SABADO">Sábado</option>
+              <option value="DOMINGO">Domingo</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ações</label>
+            <div class="controls" style="justify-content:flex-start">
+              <button class="btn danger" id="bmDelete">Excluir</button>
             </div>
-          </div>
-
-          <div class="field">
-            <label>Excluir BM</label>
-            <button class="btn danger" id="btnDelete">Excluir</button>
+            <div class="muted">Edição só no link com <span class="mono">#edit=1&key=...</span></div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <div class="hint" id="editHint">Modo: Local</div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap">
-          <button class="btn" id="btnCancel">Cancelar</button>
-          <button class="btn primary" id="btnSave">Salvar</button>
+        <div class="muted" id="bmMode">Leitura</div>
+        <div class="controls">
+          <button class="btn" id="bmCancel">Cancelar</button>
+          <button class="btn primary" id="bmSave">Salvar</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: Settings -->
-  <div class="modal-backdrop" id="settingsBackdrop" aria-hidden="true">
-    <div class="modal sm" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <!-- Import Modal -->
+  <div class="backdrop" id="importBackdrop">
+    <div class="modal" style="width:min(780px,100%)">
       <div class="modal-header">
-        <b id="settingsTitle">Configurar Online</b>
-        <button class="btn ghost" id="btnSettingsClose">✕</button>
+        <b>Importar texto</b>
+        <button class="btn" id="importClose">✕</button>
       </div>
-      <div class="modal-body one">
+      <div class="modal-body" style="grid-template-columns:1fr">
         <div class="field">
-          <label>URL da API (Google Apps Script / etc.)</label>
-          <input id="sApiUrl" placeholder="Cole aqui a URL do Web App" />
-          <div class="hint">Com URL preenchida: abre dados online. Sem URL: continua modo LOCAL.</div>
-        </div>
-
-        <div class="grid2">
-          <div class="field">
-            <label>Nome do editor (aparece na “Última edição”)</label>
-            <input id="sEditor" placeholder="Ex: Planejamento / Pedro / Roberto" />
-          </div>
-          <div class="field">
-            <label>Chave de edição</label>
-            <input id="sEditKey" placeholder="Sem chave = somente leitura no online" />
-            <div class="hint">Quem tiver essa chave consegue editar o ONLINE; sem chave fica só visualização.</div>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Teste de conexão</label>
-          <button class="btn" id="btnPing">Testar API</button>
-          <div class="hint" id="pingResult">—</div>
-        </div>
-
-        <div class="field">
-          <label>Link pronto (edição)</label>
-          <div class="small">
-            Depois que o site estiver hospedado, use esse padrão:<br>
-            <span class="mono">SEU_SITE/index.html#api=URL_DA_API&key=SUA_CHAVE&editor=Planejamento</span><br>
-            (dica: usar <b>#</b> não envia a chave para o servidor)
-          </div>
+          <label>Cole o texto (MARCOS / 5768 - 100 (09:30))</label>
+          <textarea class="cell" id="importText" style="min-height:260px"></textarea>
         </div>
       </div>
       <div class="modal-footer">
-        <div class="hint">Após salvar, o sistema tenta conectar e sincronizar.</div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap">
-          <button class="btn danger" id="btnClearSettings">Limpar Config</button>
-          <button class="btn" id="btnSettingsCancel">Cancelar</button>
-          <button class="btn primary" id="btnSettingsSave">Salvar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: Import Programação -->
-  <div class="modal-backdrop" id="importProgBackdrop" aria-hidden="true">
-    <div class="modal sm" role="dialog" aria-modal="true" aria-labelledby="importProgTitle">
-      <div class="modal-header">
-        <b id="importProgTitle">Importar Programação (texto)</b>
-        <button class="btn ghost" id="btnImportProgClose">✕</button>
-      </div>
-      <div class="modal-body one">
-        <div class="field">
-          <label>Cole o texto no formato atual (exatamente como você monta)</label>
-          <textarea id="importProgText" placeholder="MARCOS
-
-5768 - 100 (09:30)
-9106 - 100 (10:00)
-
-SPORT
-
-4630 - 120 (09:30)
-..."></textarea>
-          <div class="hint">Vai criar linhas na data selecionada.</div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <div class="hint">Dica: você pode importar várias vezes; depois edita na tabela.</div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap">
-          <button class="btn" id="btnImportProgCancel">Cancelar</button>
-          <button class="btn primary" id="btnImportProgRun">Importar</button>
+        <div class="muted">Cria linhas na data + carteira selecionadas.</div>
+        <div class="controls">
+          <button class="btn" id="importCancel">Cancelar</button>
+          <button class="btn primary" id="importRun">Importar</button>
         </div>
       </div>
     </div>
@@ -666,406 +444,143 @@ SPORT
   <div class="toast" id="toast"></div>
 
   <script>
-    // Online contract:
-    // GET  API_URL              -> { items: [...], dispatches: [...] }
-    // POST API_URL?key=EDIT_KEY -> body { items: [...], dispatches: [...] }
-
-    const CACHE_KEY = "bm_board_cache_v4";
-    const SETTINGS_KEY = "bm_board_settings_v4";
+    // FIXO (todos que abrirem o link veem o mesmo online)
+    const API_URL = "https://script.google.com/macros/s/AKfycbxyWYuCvc5P-LL3LzKOKiyJ6DeQEijd3R23fyIgQ-Q87wf4sylrF4z5sWhfJ6qYCfKH/exec";
 
     const COLUMNS = [
       { id:"standby",  name:"STAND BY" },
-      { id:"numeros",  name:"NÚMEROS (até 10)" },
+      { id:"numeros",  name:"NÚMEROS" },
       { id:"cartao",   name:"CARTÃO" },
-      { id:"template", name:"TEMPLATE EM ANÁLISE" },
+      { id:"template", name:"TEMPLATE" },
       { id:"disparos", name:"DISPAROS" }
     ];
+    const BUCKETS = [
+      {id:"GBR_CLT",label:"GBR CLT"},
+      {id:"GBR_NOVO",label:"GBR NOVO"},
+      {id:"3P_CLT",label:"3P CLT"},
+      {id:"3PORT",label:"3PORT"}
+    ];
+    const bucketLabel = (id)=> (BUCKETS.find(b=>b.id===id)?.label || id);
 
-    const QUALITY = {
-      APROVADO: { label:"Aprovado", dot:"good" },
-      MEDIA:    { label:"Qualidade média", dot:"mid" },
-      BAIXA:    { label:"Qualidade baixa (risco)", dot:"bad" }
-    };
-
-    let settings = { apiUrl:"https://script.google.com/macros/s/AKfycbxyWYuCvc5P-LL3LzKOKiyJ6DeQEijd3R23fyIgQ-Q87wf4sylrF4z5sWhfJ6qYCfKH/exec", editKey:"", editorName:"" };
     let state = { items: [], dispatches: [] };
+    let settings = { edit:false, key:"", editor:"" };
+    let syncing=false, dirty=false, lastSig="";
+    let saveTimer=null;
 
-    let currentId = null;
-    let dirty = false;
-    let syncing = false;
-    let lastRemoteSig = "";
-    let syncTimer = null;
-    let pollTimer = null;
+    const $ = (s)=>document.querySelector(s);
+    const toast = (m)=>{ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(window.__tt); window.__tt=setTimeout(()=>t.classList.remove("show"), 2600); };
+    const pad2=(n)=>String(n).padStart(2,"0");
+    const todayISO=()=>{ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
+    const nowISO=()=>{ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+    const toBR=(iso)=>{ if(!iso) return "—"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; };
+    const uid=()=> (crypto?.randomUUID?.() || ("id-"+Math.random().toString(16).slice(2)+"-"+Date.now()));
 
-    const $ = (sel) => document.querySelector(sel);
-
-    const pad2 = (n) => String(n).padStart(2,"0");
-    function todayISO(){
-      const d = new Date();
-      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    function parseHash(){
+      const h=(location.hash||"").replace(/^#/,"");
+      const p=new URLSearchParams(h);
+      settings.edit = (p.get("edit")==="1");
+      settings.key = (p.get("key")||"").trim();
+      settings.editor = (p.get("editor")||"").trim();
     }
-    function nowISO(){
-      const d = new Date();
-      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-    }
-    function toBR(isoDate){
-      if(!isoDate) return "—";
-      const [y,m,d] = isoDate.split("-");
-      return `${d}/${m}/${y}`;
-    }
-    function uuid(){
-      return (crypto?.randomUUID?.() || ("id-"+Math.random().toString(16).slice(2) + "-" + Date.now()));
-    }
-    function toast(msg){
-      const t = $("#toast");
-      t.textContent = msg;
-      t.classList.add("show");
-      clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(()=>t.classList.remove("show"), 2600);
-    }
-    function escapeHtml(str){
-      return String(str || "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
-    function normalizeNumbers(text){
-      const arr = (text || "")
-        .split(/\r?\n/g)
-        .map(s => s.trim())
-        .filter(Boolean);
-      const seen = new Set();
-      const out = [];
-      for(const n of arr){
-        if(!seen.has(n)){
-          seen.add(n);
-          out.push(n);
-        }
-      }
-      return out.slice(0, 10);
-    }
-    function getColumnName(id){
-      return (COLUMNS.find(c=>c.id===id)?.name) || id;
-    }
-    function qualityChip(q){
-      const qd = QUALITY[q] || QUALITY.MEDIA;
-      const risk = (q === "BAIXA");
-      return `
-        <span class="chip" title="${qd.label}">
-          <span class="qdot ${qd.dot}"></span>
-          <span>${risk ? '<span class="warn">RISCO</span>' : qd.label}</span>
-        </span>
-      `;
-    }
-    function scheduleLabel(item){
-      if(item.disparoDate) return `📅 ${toBR(item.disparoDate)}`;
-      if(item.disparoWeekday){
-        const map = {SEGUNDA:"Segunda",TERCA:"Terça",QUARTA:"Quarta",QUINTA:"Quinta",SEXTA:"Sexta",SABADO:"Sábado",DOMINGO:"Domingo"};
-        return `🗓️ ${map[item.disparoWeekday] || item.disparoWeekday}`;
-      }
-      return "—";
-    }
-    function matchesFilters(item){
-      const q = ($("#filterQuality").value || "").trim();
-      if(q && item.quality !== q) return false;
-
-      const s = ($("#search").value || "").trim().toLowerCase();
-      if(!s) return true;
-      const hay = [
-        item.bmId,
-        item.notes || "",
-        (item.numbers || []).join(" "),
-        getColumnName(item.column),
-        item.quality
-      ].join(" ").toLowerCase();
-      return hay.includes(s);
-    }
-
-    function hasOnline(){ return !!settings.apiUrl; }
-    function canSync(){ return !!(settings.apiUrl && settings.editKey); }
-    function canEdit(){
-      if(!hasOnline()) return true;      // local edit always
-      return !!settings.editKey;         // online edit needs key
-    }
-
-    function setSyncUI(mode){
-      const dot = $("#syncDot");
-      const text = $("#syncText");
-      dot.className = "dot";
-      if(mode === "local"){
-        dot.classList.add("mid");
-        text.textContent = "Local: editável";
-      }else if(mode === "online_readonly"){
-        dot.classList.add("good");
-        text.textContent = "Online: leitura";
-      }else if(mode === "online_edit"){
-        dot.classList.add("good");
-        text.textContent = dirty ? "Online: edição (pendente)" : "Online: edição";
-      }else if(mode === "syncing"){
-        dot.classList.add("mid");
-        text.textContent = "Online: sincronizando…";
-      }else if(mode === "offline_cache"){
-        dot.classList.add("mid");
-        text.textContent = "Online: cache";
-      }else if(mode === "error"){
-        dot.classList.add("bad");
-        text.textContent = "Online: erro";
-      }
-    }
-
-    function updateEditUI(){
-      const editable = canEdit();
-      $("#btnAdd").disabled = !editable;
-      $("#btnImport").disabled = !editable;
-      $("#btnReset").disabled = !editable;
-
-      if(!hasOnline()){ setSyncUI("local"); return; }
-      if(syncing){ setSyncUI("syncing"); return; }
-      if(canSync()) setSyncUI("online_edit");
-      else setSyncUI("online_readonly");
-    }
-
-    function saveCache(){ localStorage.setItem(CACHE_KEY, JSON.stringify(state)); }
-    function loadCache(){
-      try{
-        const raw = localStorage.getItem(CACHE_KEY);
-        if(raw){
-          const parsed = JSON.parse(raw);
-          if(parsed && Array.isArray(parsed.items)) state.items = parsed.items;
-          if(parsed && Array.isArray(parsed.dispatches)) state.dispatches = parsed.dispatches;
-        }
-      }catch(e){}
-      if(!Array.isArray(state.items)) state.items = [];
-      if(!Array.isArray(state.dispatches)) state.dispatches = [];
-    }
-    function saveSettings(){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
-    function loadSettings(){
-      try{
-        const raw = localStorage.getItem(SETTINGS_KEY);
-        if(raw){
-          const parsed = JSON.parse(raw);
-          settings = {
-            apiUrl: (parsed.apiUrl || "").trim(),
-            editKey: (parsed.editKey || "").trim(),
-            editorName: (parsed.editorName || "").trim()
-          };
-        }
-      }catch(e){}
-    }
+    function canEdit(){ return settings.edit && !!settings.key; }
 
     function signatureOf(st){
       const str = JSON.stringify({
-        items: (st.items||[]).map(i=>[
-          i.id,i.bmId,i.column,i.quality,i.createdAt,i.updatedAt,
-          i.disparoDate||"",i.disparoWeekday||"",i.isDone?1:0,i.doneAt||"",
-          (i.numbers||[]).join(","),(i.notes||"")
-        ]),
-        dispatches: (st.dispatches||[]).map(d=>[d.id,d.date,d.operator,d.code,d.qty,d.time])
+        items:(st.items||[]).map(i=>[i.id,i.bmId,i.column,i.quality,i.createdAt,i.updatedAt,i.disparoDate||"",i.disparoWeekday||"", (i.numbers||[]).join(","), (i.notes||"")]),
+        dispatches:(st.dispatches||[]).map(d=>[d.id,d.date,d.bucket,d.operator,d.code,d.qty,d.time])
       });
-      let h = 0;
-      for(let k=0;k<str.length;k++) h = (h*31 + str.charCodeAt(k)) >>> 0;
+      let h=0; for(let k=0;k<str.length;k++) h=(h*31+str.charCodeAt(k))>>>0;
       return String(h);
     }
 
-    function parseUpdatedAt(ts){
-      const base = String(ts || "").slice(0,16); // YYYY-MM-DD HH:MM
-      const m = base.match(/^(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2})$/);
-      if(!m) return 0;
-      return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], 0).getTime();
+    async function apiGET(){
+      const r = await fetch(API_URL, { cache:"no-store" });
+      const j = await r.json();
+      if(!j || !Array.isArray(j.items)) throw new Error("API inválida");
+      if(!Array.isArray(j.dispatches)) j.dispatches = [];
+      return j;
     }
 
-    function mergeItemsById(localItems, remoteItems){
-      const map = new Map();
-      for(const it of (remoteItems || [])) map.set(it.id, it);
-      for(const it of (localItems || [])){
-        if(!map.has(it.id)){
-          map.set(it.id, it);
-        }else{
-          const r = map.get(it.id);
-          map.set(it.id, parseUpdatedAt(it.updatedAt) >= parseUpdatedAt(r.updatedAt) ? it : r);
-        }
+    async function apiPOST(){
+      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(settings.key);
+      // sem headers => evita preflight no Apps Script
+      const r = await fetch(url, { method:"POST", body: JSON.stringify(state) });
+      const j = await r.json().catch(()=>({}));
+      if(j && j.ok===false) throw new Error(j.error || "Falha ao salvar");
+      return j;
+    }
+
+    function setModeUI(){
+      const dot=$("#modeDot"), text=$("#modeText");
+      dot.className="dot";
+      if(canEdit()){
+        dot.classList.add("good");
+        text.textContent = syncing ? "Edição • salvando…" : "Edição";
+      }else{
+        dot.classList.add("mid");
+        text.textContent = "Leitura (online)";
       }
-      return Array.from(map.values());
+      $("#btnAdd").disabled = !canEdit();
+      $("#btnSave").disabled = !canEdit();
+      $("#btnAddLine").disabled = !canEdit();
+      $("#btnImport").disabled = !canEdit();
     }
 
-    function mergeDispatches(localArr, remoteArr){
-      const map = new Map();
-      for(const d of (remoteArr||[])) map.set(d.id, d);
-      for(const d of (localArr||[])) if(!map.has(d.id)) map.set(d.id, d);
-      return Array.from(map.values());
-    }
-
-    async function fetchRemote(){
-      const res = await fetch(settings.apiUrl, { method:"GET", cache:"no-store" });
-      if(!res.ok) throw new Error("GET " + res.status);
-      const data = await res.json();
-      if(!data || !Array.isArray(data.items)) throw new Error("Formato inválido (esperado {items:[]})");
-      if(!Array.isArray(data.dispatches)) data.dispatches = [];
-      return data;
-    }
-
-    async function pushRemote(){
-      if(!canSync()) throw new Error("Sem chave de edição.");
-      const url = settings.apiUrl + (settings.apiUrl.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(settings.editKey);
-      const res = await fetch(url, {
-        method:"POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify(state)
-      });
-      if(!res.ok) throw new Error("POST " + res.status);
-      try{ await res.json(); }catch(e){}
-    }
-
-    function scheduleSync(){
-      if(!canSync()) return;
+    function scheduleSave(){
+      if(!canEdit()) return;
       dirty = true;
-      updateEditUI();
-      clearTimeout(syncTimer);
-      syncTimer = setTimeout(async ()=>{
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async ()=>{
         try{
-          syncing = true;
-          setSyncUI("syncing");
-          await pushRemote();
-          dirty = false;
-          syncing = false;
-          lastRemoteSig = signatureOf(state);
-          updateEditUI();
-          toast("Sincronizado.");
+          syncing=true; setModeUI();
+          await apiPOST();
+          syncing=false; dirty=false;
+          lastSig = signatureOf(state);
+          setModeUI();
+          toast("Salvo no online.");
         }catch(e){
-          syncing = false;
-          setSyncUI("error");
-          updateEditUI();
-          toast("Erro ao sincronizar. Confira ⚙️ Online.");
-          console.error(e);
+          syncing=false; setModeUI();
+          toast("Erro ao salvar: " + (e.message||""));
         }
       }, 650);
     }
 
-    async function startPolling(){
-      clearInterval(pollTimer);
-      if(!hasOnline()) return;
-      pollTimer = setInterval(async ()=>{
-        if(syncing || dirty) return;
-        try{
-          const remote = await fetchRemote();
-          const sig = signatureOf(remote);
-          if(!lastRemoteSig) lastRemoteSig = sig;
-          if(sig !== lastRemoteSig){
-            state.items = mergeItemsById(state.items, remote.items);
-            state.dispatches = mergeDispatches(state.dispatches, remote.dispatches);
-            saveCache();
-            lastRemoteSig = signatureOf(state);
-            render();
-          }
-        }catch(e){}
-      }, 15000);
-    }
-
-    function withEditorSuffix(ts){
-      if(!settings.editorName) return ts;
-      return `${ts} — ${settings.editorName}`;
-    }
-
-    function seedIfEmpty(){
-      if(state.items.length !== 0) return;
-      state.items = [{
-        id: uuid(),
-        bmId: "Exemplo: BM Planejamento",
-        column: "standby",
-        quality: "APROVADO",
-        numbers: [],
-        notes: "Use Programação para gerar o texto (MARCOS / SPORT...).",
-        createdAt: todayISO(),
-        updatedAt: withEditorSuffix(nowISO()),
-        disparoDate: "",
-        disparoWeekday: "",
-        isDone: false,
-        doneAt: ""
-      }];
-    }
-
-    // ======= URL HASH -> settings =======
-    function parseHashSettings(){
-      const hash = (location.hash || "").replace(/^#/, "").trim();
-      if(!hash) return;
-      const params = new URLSearchParams(hash);
-const key = params.get("key");
-      const editor = params.get("editor");
-      let changed = false;
-if(key && key.trim()){
-        settings.editKey = decodeURIComponent(key.trim());
-        changed = true;
-      }
-      if(editor && editor.trim()){
-        settings.editorName = decodeURIComponent(editor.trim());
-        changed = true;
-      }
-      if(changed){
-        saveSettings();
-        toast("Modo/config carregado pelo link.");
-      }
-    }
-
-    async function bootstrap(){
-      loadSettings();
-      parseHashSettings();
-      loadCache();
-      seedIfEmpty();
-
-      // set programação date default
-      $("#progDate").value = todayISO();
-
-      if(!hasOnline()){
-        saveCache();
-        updateEditUI();
-        render();
-        return;
-      }
-
+    async function poll(){
       try{
-        const remote = await fetchRemote();
-        state.items = mergeItemsById(state.items, remote.items);
-        state.dispatches = mergeDispatches(state.dispatches, remote.dispatches);
-
-        // se online vazio e tem chave -> publica estado
-        const remoteEmpty = (remote.items||[]).length === 0 && (remote.dispatches||[]).length === 0;
-        if(remoteEmpty && canSync()){
-          toast("Online vazio. Publicando seus dados locais…");
-          syncing = true;
-          updateEditUI();
-          await pushRemote();
-          syncing = false;
-          dirty = false;
-          toast("Publicado no online.");
+        if(syncing || dirty) return;
+        const remote = await apiGET();
+        const sig = signatureOf(remote);
+        if(!lastSig) lastSig = sig;
+        if(sig !== lastSig){
+          state = remote;
+          lastSig = sig;
+          renderAll();
         }
-
-        saveCache();
-        lastRemoteSig = signatureOf(state);
-        updateEditUI();
-        render();
-        startPolling();
-      }catch(e){
-        console.error(e);
-        setSyncUI("offline_cache");
-        updateEditUI();
-        render();
-      }
+      }catch(e){}
     }
 
-    // ======= Render: Board =======
+    // ---------- BOARD ----------
+    function qdot(q){
+      return q==="APROVADO" ? "good" : q==="BAIXA" ? "bad" : "mid";
+    }
+    function qualityLabel(q){
+      if(q==="APROVADO") return "Aprovado";
+      if(q==="BAIXA") return "Qualidade baixa";
+      return "Qualidade média";
+    }
+    function matchesSearch(it){
+      const s = ($("#search").value||"").trim().toLowerCase();
+      if(!s) return true;
+      const hay = [it.bmId, it.notes||"", it.column||"", it.quality||""].join(" ").toLowerCase();
+      return hay.includes(s);
+    }
     function renderBoard(){
-      const board = $("#board");
-      board.innerHTML = "";
+      const board=$("#board");
+      board.innerHTML="";
       for(const col of COLUMNS){
-        const items = state.items
-          .filter(it => it.column === col.id)
-          .filter(matchesFilters)
-          .sort((a,b)=> (a.createdAt > b.createdAt ? -1 : 1));
-
-        const colEl = document.createElement("div");
-        colEl.className = "col";
+        const items = (state.items||[]).filter(it=>it.column===col.id).filter(matchesSearch);
+        const colEl=document.createElement("div");
+        colEl.className="col";
         colEl.innerHTML = `
           <div class="col-header">
             <b>${col.name}</b>
@@ -1073,618 +588,425 @@ if(key && key.trim()){
           </div>
           <div class="dropzone" data-col="${col.id}"></div>
         `;
-
-        const dz = colEl.querySelector(".dropzone");
+        const dz=colEl.querySelector(".dropzone");
         if(canEdit()){
-          dz.addEventListener("dragover", (e)=>{ e.preventDefault(); dz.classList.add("dragover"); });
-          dz.addEventListener("dragleave", ()=> dz.classList.remove("dragover"));
-          dz.addEventListener("drop", (e)=>{
-            e.preventDefault();
-            dz.classList.remove("dragover");
+          dz.addEventListener("dragover", e=>{e.preventDefault(); dz.classList.add("dragover");});
+          dz.addEventListener("dragleave", ()=>dz.classList.remove("dragover"));
+          dz.addEventListener("drop", e=>{
+            e.preventDefault(); dz.classList.remove("dragover");
             const id = e.dataTransfer.getData("text/plain");
-            moveItem(id, col.id);
+            const idx = state.items.findIndex(x=>x.id===id);
+            if(idx>=0){
+              state.items[idx].column = col.id;
+              state.items[idx].updatedAt = nowISO();
+              scheduleSave();
+              renderBoard();
+            }
           });
         }
-
         for(const it of items){
-          const card = document.createElement("div");
-          card.className = "card" + (canEdit() ? "" : " readonly");
+          const card=document.createElement("div");
+          card.className = "card" + (canEdit()?"":" readonly");
           card.draggable = canEdit();
-
-          const q = it.quality || "MEDIA";
-          const nums = (it.numbers || []).length;
-          const sched = scheduleLabel(it);
-          const doneBadge = it.isDone ? `<span class="chip"><strong>Disparado</strong> • ${toBR(it.doneAt || "")}</span>` : "";
-
           card.innerHTML = `
             <div class="card-top">
               <div style="min-width:0">
-                <div class="bm-id" title="${escapeHtml(it.bmId)}">🏷️ ${escapeHtml(it.bmId)}</div>
+                <div class="bm-id">🏷️ ${escapeHtml(it.bmId||"")}</div>
                 <div class="meta">
-                  <span class="chip"><strong>📌 ${toBR(it.createdAt)}</strong></span>
-                  ${qualityChip(q)}
-                  <span class="chip"><strong>☎️ ${nums}/10</strong></span>
-                  <span class="chip"><strong>${sched}</strong></span>
-                  ${doneBadge}
+                  <span class="chip"><strong>📌 ${toBR(it.createdAt||"")}</strong></span>
+                  <span class="chip"><span class="qdot ${qdot(it.quality||"MEDIA")}" style="width:8px;height:8px;border-radius:999px;display:inline-block"></span> <strong>${it.quality==="BAIXA" ? "RISCO" : qualityLabel(it.quality||"MEDIA")}</strong></span>
                 </div>
-                ${it.notes ? `<div class="small" style="margin-top:8px">${escapeHtml(it.notes).slice(0,140)}${(it.notes.length>140?"…":"")}</div>` : `<div class="small" style="margin-top:8px">Sem observações.</div>`}
+                <div class="small" style="margin-top:8px">${it.notes ? escapeHtml(it.notes).slice(0,140) : "Sem observações."}</div>
               </div>
               <div class="actions">
-                <button class="iconbtn" data-action="edit">✏️</button>
+                <button class="iconbtn" ${canEdit()?"":"disabled"} data-edit="${it.id}">✏️</button>
               </div>
             </div>
           `;
-
           if(canEdit()){
-            card.addEventListener("dragstart", (e)=>{
+            card.addEventListener("dragstart", e=>{
               e.dataTransfer.setData("text/plain", it.id);
-              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.effectAllowed="move";
             });
           }
-          card.querySelector('[data-action="edit"]').addEventListener("click", ()=>openModal(it.id));
+          card.querySelector("[data-edit]").addEventListener("click", ()=>openBm(it.id));
           dz.appendChild(card);
         }
         board.appendChild(colEl);
       }
     }
 
-    // ======= Render: Agenda =======
-    function renderAgenda(){
-      const upcoming = $("#agendaUpcoming");
-      const done = $("#agendaDone");
-      upcoming.innerHTML = "";
-      done.innerHTML = "";
+    // ---------- BM MODAL ----------
+    let currentBmId = null;
 
-      const filtered = state.items.filter(matchesFilters);
-      const doneItems = filtered.filter(i=>i.isDone).sort((a,b)=> (a.doneAt||"").localeCompare(b.doneAt||""));
-      const upcomingItems = filtered.filter(i=>!i.isDone).filter(i=>i.disparoDate||i.disparoWeekday);
+    function normalizeNumbers(text){
+      const arr = String(text||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      const seen = new Set();
+      const out=[];
+      for(const n of arr){ if(!seen.has(n)){ seen.add(n); out.push(n); } }
+      return out.slice(0,10);
+    }
 
-      const groups = new Map();
-      for(const it of upcomingItems){
-        const key = it.disparoDate ? ("D:" + it.disparoDate) : ("W:" + it.disparoWeekday);
-        if(!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(it);
-      }
+    function openBm(id){
+      const isNew = !id;
+      currentBmId = id || null;
+      const bm = isNew ? null : state.items.find(x=>x.id===id);
 
-      if(groups.size === 0){
-        upcoming.innerHTML = `<div class="small muted">Nenhum disparo agendado ainda.</div>`;
-      }else{
-        for(const [key, arr] of groups.entries()){
-          const header = document.createElement("div");
-          header.className = "row";
-          header.innerHTML = `
-            <div class="row-left">
-              <div><b>${escapeHtml(arr[0].disparoDate ? `📅 ${toBR(arr[0].disparoDate)}` : `🗓️ ${scheduleLabel(arr[0]).replace(/^🗓️ /,"")}`)}</b></div>
-              <div class="small">${arr.length} BM(s)</div>
-            </div>
-            <div class="row-right"><span class="kbd">Clique em uma BM</span></div>
-          `;
-          upcoming.appendChild(header);
+      $("#bmTitle").textContent = isNew ? "Nova BM" : "Editar BM";
+      $("#fBmId").value = bm?.bmId || "";
+      $("#fColumn").value = bm?.column || "standby";
+      $("#fQuality").value = bm?.quality || "MEDIA";
+      $("#fNumbers").value = (bm?.numbers || []).join("\n");
+      $("#fNotes").value = bm?.notes || "";
+      $("#fCreatedAt").value = bm ? `${toBR(bm.createdAt)} (${bm.createdAt})` : `${toBR(todayISO())} (${todayISO()})`;
+      $("#fUpdatedAt").value = bm?.updatedAt || "—";
+      $("#fDisparoDate").value = bm?.disparoDate || "";
+      $("#fDisparoWeekday").value = bm?.disparoWeekday || "";
+      $("#fNumbersCount").textContent = `${normalizeNumbers($("#fNumbers").value).length}/10`;
 
-          const list = document.createElement("div");
-          list.className = "list";
-          list.style.margin = "10px 0 14px";
-          for(const it of arr){
-            const r = document.createElement("div");
-            r.className = "row";
-            r.innerHTML = `
-              <div class="row-left" style="min-width:0">
-                <div class="mono" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><b>${escapeHtml(it.bmId)}</b></div>
-                <div class="small">Criada em <b>${toBR(it.createdAt)}</b> • Status: <b>${escapeHtml(getColumnName(it.column))}</b></div>
-              </div>
-              <div class="row-right">
-                ${qualityChip(it.quality || "MEDIA")}
-                <button class="btn" data-edit="${it.id}">${canEdit() ? "Editar" : "Ver"}</button>
-                <button class="btn primary" data-done="${it.id}" ${canEdit() ? "" : "disabled"}>Marcar Disparado</button>
-              </div>
-            `;
-            r.querySelector('[data-edit]').addEventListener("click", ()=>openModal(it.id));
-            r.querySelector('[data-done]').addEventListener("click", ()=>{ if(canEdit()) { markDone(it.id, todayISO()); toast("Marcado como disparado."); }});
-            list.appendChild(r);
-          }
-          upcoming.appendChild(list);
+      const lock = !canEdit();
+      ["fBmId","fColumn","fQuality","fNumbers","fNotes","fDisparoDate","fDisparoWeekday"].forEach(k=>{
+        const el = document.getElementById(k);
+        if(el) el.disabled = lock;
+      });
+      $("#bmSave").disabled = lock;
+      $("#bmDelete").disabled = lock || isNew;
+      $("#bmMode").textContent = lock ? "Leitura" : "Edição";
+
+      $("#bmBackdrop").classList.add("open");
+    }
+    function closeBm(){
+      $("#bmBackdrop").classList.remove("open");
+      currentBmId = null;
+    }
+
+    $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent = `${normalizeNumbers($("#fNumbers").value).length}/10`; });
+
+    $("#bmSave").addEventListener("click", ()=>{
+      if(!canEdit()) return;
+      const bmId = ($("#fBmId").value||"").trim();
+      if(!bmId){ toast("Informe a identificação da BM."); return; }
+
+      const patch = {
+        bmId,
+        column: $("#fColumn").value,
+        quality: $("#fQuality").value,
+        numbers: normalizeNumbers($("#fNumbers").value),
+        notes: ($("#fNotes").value||"").trim(),
+        disparoDate: $("#fDisparoDate").value,
+        disparoWeekday: $("#fDisparoWeekday").value,
+        updatedAt: nowISO()
+      };
+
+      if(currentBmId){
+        const idx = state.items.findIndex(x=>x.id===currentBmId);
+        if(idx>=0){
+          state.items[idx] = { ...state.items[idx], ...patch };
         }
-      }
-
-      if(doneItems.length === 0){
-        done.innerHTML = `<div class="small muted">Ainda não há itens no histórico.</div>`;
       }else{
-        for(const it of doneItems.slice().reverse()){
-          const r = document.createElement("div");
-          r.className = "row";
-          r.innerHTML = `
-            <div class="row-left" style="min-width:0">
-              <div class="mono" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><b>${escapeHtml(it.bmId)}</b></div>
-              <div class="small">Disparado em <b>${toBR(it.doneAt)}</b> • Criada em <b>${toBR(it.createdAt)}</b></div>
-            </div>
-            <div class="row-right">
-              ${qualityChip(it.quality || "MEDIA")}
-              <button class="btn" data-edit="${it.id}">${canEdit() ? "Editar" : "Ver"}</button>
-              <button class="btn" data-undone="${it.id}" ${canEdit() ? "" : "disabled"}>Desfazer</button>
-            </div>
-          `;
-          r.querySelector('[data-edit]').addEventListener("click", ()=>openModal(it.id));
-          r.querySelector('[data-undone]').addEventListener("click", ()=>{ if(canEdit()) { unmarkDone(it.id); toast("Removido do histórico."); }});
-          done.appendChild(r);
-        }
+        state.items.unshift({
+          id: uid(),
+          createdAt: todayISO(),
+          ...patch
+        });
       }
+
+      scheduleSave();
+      renderAll();
+      closeBm();
+    });
+
+    $("#bmDelete").addEventListener("click", ()=>{
+      if(!canEdit() || !currentBmId) return;
+      if(!confirm("Excluir essa BM?")) return;
+      state.items = state.items.filter(x=>x.id!==currentBmId);
+      scheduleSave();
+      renderAll();
+      closeBm();
+    });
+
+    $("#bmClose").addEventListener("click", closeBm);
+    $("#bmCancel").addEventListener("click", closeBm);
+    $("#bmBackdrop").addEventListener("click", (e)=>{ if(e.target===$("#bmBackdrop")) closeBm(); });
+
+    // ---------- PROGRAMAÇÃO ----------
+    function getProgDate(){ return $("#progDate").value || todayISO(); }
+    function getProgBucket(){ return $("#progBucket").value || "GBR_CLT"; }
+    function listDispatches(date,bucket){ return (state.dispatches||[]).filter(d=>d.date===date && (d.bucket||"GBR_CLT")===bucket); }
+
+    function computeTotals(date,bucket){
+      const list = listDispatches(date,bucket);
+      const qty = list.reduce((a,x)=>a+(Number(x.qty)||0),0);
+      $("#totals").innerHTML = `<strong>${list.length}</strong> linhas • <strong>${qty}</strong> disparos`;
     }
 
-    // ======= Programação =======
-    function getProgDate(){
-      return $("#progDate").value || todayISO();
-    }
-
-    function dispatchesForDate(dateISO){
-      return (state.dispatches || []).filter(d => d.date === dateISO);
-    }
-
-    function computeTotals(dateISO){
-      const list = dispatchesForDate(dateISO);
-      const totalLines = list.length;
-      const totalQty = list.reduce((acc, d)=> acc + (Number(d.qty)||0), 0);
-      $("#progTotals").textContent = `${totalLines} linhas • ${totalQty} disparos`;
+    function generateText(date,bucket){
+      const list=listDispatches(date,bucket).slice().sort((a,b)=>String(a.operator||"").localeCompare(String(b.operator||"")) || String(a.time||"").localeCompare(String(b.time||"")));
+      const ops=[...new Set(list.map(x=>(x.operator||"").trim().toUpperCase()).filter(Boolean))].sort();
+      const out=[];
+      for(const op of ops){
+        out.push(op,"");
+        const rows=list.filter(x=>(x.operator||"").trim().toUpperCase()===op).sort((a,b)=>String(a.time||"").localeCompare(String(b.time||"")));
+        for(const r of rows){
+          if(!r.code) continue;
+          out.push(`${r.code} - ${Number(r.qty||0)} (${r.time||"00:00"})`);
+        }
+        out.push("");
+      }
+      return out.join("\n").trim()+"\n";
     }
 
     function renderProg(){
-      const dateISO = getProgDate();
-      const tbody = $("#progBody");
-      tbody.innerHTML = "";
-
-      const list = dispatchesForDate(dateISO)
-        .slice()
-        .sort((a,b)=> (a.operator||"").localeCompare(b.operator||"") || (a.time||"").localeCompare(b.time||""));
-
+      const date=getProgDate(), bucket=getProgBucket();
+      const tbody=$("#progBody");
+      tbody.innerHTML="";
+      const editable=canEdit();
+      const list=listDispatches(date,bucket).slice().sort((a,b)=>String(a.time||"").localeCompare(String(b.time||"")));
       for(const d of list){
-        const tr = document.createElement("tr");
+        const tr=document.createElement("tr");
         tr.innerHTML = `
-          <td><input class="cell-input" value="${escapeHtml(d.operator||"")}" data-k="operator" data-id="${d.id}" placeholder="Ex: MARCOS" /></td>
-          <td><input class="cell-input mini2" value="${escapeHtml(d.code||"")}" data-k="code" data-id="${d.id}" placeholder="Ex: 5768" /></td>
-          <td><input class="cell-input mini" type="number" value="${escapeHtml(String(d.qty||""))}" data-k="qty" data-id="${d.id}" placeholder="Ex: 100" /></td>
-          <td><input class="cell-input mini2" type="time" value="${escapeHtml(d.time||"")}" data-k="time" data-id="${d.id}" /></td>
-          <td class="nowrap"><button class="trash" title="Excluir" data-del="${d.id}">🗑️</button></td>
+          <td><input class="cell" ${editable?"":"disabled"} data-id="${d.id}" data-k="operator" value="${escapeHtml(d.operator||"")}"></td>
+          <td><input class="cell" ${editable?"":"disabled"} data-id="${d.id}" data-k="code" value="${escapeHtml(d.code||"")}"></td>
+          <td><input class="cell" ${editable?"":"disabled"} type="number" data-id="${d.id}" data-k="qty" value="${Number(d.qty||0)}"></td>
+          <td><input class="cell" ${editable?"":"disabled"} type="time" data-id="${d.id}" data-k="time" value="${escapeHtml(d.time||"")}"></td>
+          <td><button class="btn" ${editable?"":"disabled"} data-del="${d.id}">Del</button></td>
         `;
         tbody.appendChild(tr);
       }
-
-      // bind events
-      tbody.querySelectorAll("input[data-k]").forEach(inp=>{
+      tbody.querySelectorAll("input[data-id]").forEach(inp=>{
         inp.addEventListener("change", ()=>{
-          if(!canEdit()){ toast("Somente leitura."); renderProg(); return; }
-          const id = inp.getAttribute("data-id");
-          const key = inp.getAttribute("data-k");
-          let val = inp.value;
-          if(key === "operator") val = String(val||"").trim().toUpperCase();
-          if(key === "code") val = String(val||"").trim();
-          if(key === "qty") val = Number(val||0);
-          if(key === "time") val = String(val||"").trim();
-          updateDispatch(id, { [key]: val });
+          if(!canEdit()) return;
+          const id=inp.getAttribute("data-id");
+          const k=inp.getAttribute("data-k");
+          const row=state.dispatches.find(x=>x.id===id);
+          if(!row) return;
+          let v=inp.value;
+          if(k==="operator") v=String(v||"").trim().toUpperCase();
+          if(k==="code") v=String(v||"").trim();
+          if(k==="qty") v=Number(v||0);
+          if(k==="time") v=String(v||"").trim();
+          row[k]=v;
+          scheduleSave();
+          renderAgendaProg();
+          renderProg();
         });
       });
       tbody.querySelectorAll("button[data-del]").forEach(btn=>{
         btn.addEventListener("click", ()=>{
-          if(!canEdit()){ toast("Somente leitura."); return; }
-          const id = btn.getAttribute("data-del");
-          deleteDispatch(id);
+          if(!canEdit()) return;
+          const id=btn.getAttribute("data-del");
+          state.dispatches = state.dispatches.filter(x=>x.id!==id);
+          scheduleSave();
+          renderAgendaProg();
+          renderProg();
         });
       });
-
-      computeTotals(dateISO);
-      $("#progOutput").textContent = generateText(dateISO);
+      computeTotals(date,bucket);
+      $("#progOutput").textContent = generateText(date,bucket);
     }
 
-    function addDispatchRow(patch={}){
-      if(!canEdit()){ toast("Somente leitura."); return; }
-      const dateISO = getProgDate();
-      const d = {
-        id: uuid(),
-        date: dateISO,
-        operator: (patch.operator || "OPERADOR").toUpperCase(),
-        code: patch.code || "",
-        qty: Number(patch.qty || 0),
-        time: patch.time || ""
-      };
-      state.dispatches.unshift(d);
-      saveCache();
+    function addLine(){
+      if(!canEdit()) return toast("Abra o link de edição.");
+      state.dispatches.unshift({ id:uid(), date:getProgDate(), bucket:getProgBucket(), operator:"", code:"", qty:0, time:"" });
+      scheduleSave();
       renderProg();
-      scheduleSync();
+      renderAgendaProg();
     }
 
-    function updateDispatch(id, patch){
-      const idx = state.dispatches.findIndex(d=>d.id===id);
-      if(idx < 0) return;
-      state.dispatches[idx] = { ...state.dispatches[idx], ...patch };
-      saveCache();
-      renderProg();
-      scheduleSync();
+    function openImport(){
+      if(!canEdit()) return toast("Abra o link de edição.");
+      $("#importText").value="";
+      $("#importBackdrop").classList.add("open");
     }
+    function closeImport(){ $("#importBackdrop").classList.remove("open"); }
 
-    function deleteDispatch(id){
-      state.dispatches = state.dispatches.filter(d=>d.id!==id);
-      saveCache();
-      renderProg();
-      scheduleSync();
-    }
-
-    function generateText(dateISO){
-      const list = dispatchesForDate(dateISO).slice();
-      // group by operator, keep a stable order based on first appearance sorted by operator name
-      const ops = Array.from(new Set(list.map(d => (d.operator||"").trim().toUpperCase()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
-      const out = [];
-      for(const op of ops){
-        out.push(op);
-        out.push("");
-        const rows = list
-          .filter(d => (d.operator||"").trim().toUpperCase() === op)
-          .slice()
-          .sort((a,b)=> (a.time||"").localeCompare(b.time||"") || String(a.code||"").localeCompare(String(b.code||"")));
-        for(const r of rows){
-          const code = String(r.code||"").trim();
-          const qty = Number(r.qty||0);
-          const time = String(r.time||"").trim() || "00:00";
-          if(!code) continue;
-          out.push(`${code} - ${qty} (${time})`);
-        }
-        out.push("");
-      }
-      return out.join("\n").trim() + "\n";
-    }
-
-    function parseProgramText(text, dateISO){
-      // Parse groups + lines like: 5768 - 100 (09:30)
-      const lines = String(text||"").split(/\r?\n/);
-      let currentOp = "";
-      const created = [];
+    function parseProgramText(text){
+      const lines=String(text||"").split(/\r?\n/);
+      let currentOp=""; let count=0;
       for(const raw of lines){
-        const line = raw.trim();
+        const line=raw.trim();
         if(!line) continue;
-        // entry line
-        const m = line.match(/^(.+?)\s*-\s*(\d+)\s*\((\d{2}:\d{2})\)\s*$/);
+        const m=line.match(/^(.+?)\s*-\s*(\d+)\s*\((\d{2}:\d{2})\)\s*$/);
         if(m){
-          const code = String(m[1]||"").trim();
-          const qty = Number(m[2]||0);
-          const time = String(m[3]||"").trim();
-          if(!currentOp) currentOp = "OPERADOR";
-          created.push({operator: currentOp.toUpperCase(), code, qty, time});
-          continue;
+          const code=m[1].trim();
+          const qty=Number(m[2]||0);
+          const time=m[3].trim();
+          if(!currentOp) currentOp="OPERADOR";
+          state.dispatches.unshift({ id:uid(), date:getProgDate(), bucket:getProgBucket(), operator:currentOp.toUpperCase(), code, qty, time });
+          count++;
+        }else{
+          currentOp=line.toUpperCase();
         }
-        // operator header (any non-entry line)
-        currentOp = line.toUpperCase();
       }
-      for(const c of created){
-        addDispatchRow({ operator:c.operator, code:c.code, qty:c.qty, time:c.time });
-      }
-      return created.length;
+      return count;
     }
 
-    // ======= Render all =======
-    function render(){
-      renderBoard();
-      renderAgenda();
+    $("#importClose").addEventListener("click", closeImport);
+    $("#importCancel").addEventListener("click", closeImport);
+    $("#importBackdrop").addEventListener("click", (e)=>{ if(e.target===$("#importBackdrop")) closeImport(); });
+    $("#importRun").addEventListener("click", ()=>{
+      if(!canEdit()) return;
+      const count = parseProgramText($("#importText").value||"");
+      closeImport();
+      scheduleSave();
       renderProg();
-      updateEditUI();
-    }
-
-    // ======= CRUD Items =======
-    function createItem(payload){
-      if(!canEdit()) return;
-      const item = {
-        id: uuid(),
-        bmId: (payload.bmId || "").trim() || "BM sem nome",
-        column: payload.column || "standby",
-        quality: payload.quality || "MEDIA",
-        numbers: payload.numbers || [],
-        notes: payload.notes || "",
-        createdAt: payload.createdAt || todayISO(),
-        updatedAt: withEditorSuffix(nowISO()),
-        disparoDate: payload.disparoDate || "",
-        disparoWeekday: payload.disparoWeekday || "",
-        isDone: !!payload.isDone,
-        doneAt: payload.doneAt || ""
-      };
-      state.items.unshift(item);
-      saveCache();
-      render();
-      scheduleSync();
-    }
-    function updateItem(id, patch){
-      if(!canEdit()) return;
-      const idx = state.items.findIndex(i=>i.id===id);
-      if(idx < 0) return;
-      const before = state.items[idx];
-      state.items[idx] = { ...before, ...patch, createdAt: before.createdAt || todayISO(), updatedAt: withEditorSuffix(nowISO()) };
-      saveCache();
-      render();
-      scheduleSync();
-    }
-    function deleteItem(id){
-      if(!canEdit()) return;
-      state.items = state.items.filter(i=>i.id!==id);
-      saveCache();
-      render();
-      scheduleSync();
-    }
-    function moveItem(id, columnId){ updateItem(id, { column: columnId }); }
-    function markDone(id, doneAt){ updateItem(id, { isDone:true, doneAt: doneAt || todayISO() }); }
-    function unmarkDone(id){ updateItem(id, { isDone:false, doneAt:"" }); }
-
-    // ======= Modal BM =======
-    function openModal(id){
-      currentId = id || null;
-      const isNew = !id;
-
-      $("#modalTitle").textContent = isNew ? "Nova BM" : (canEdit() ? "Editar BM" : "Visualizar BM");
-      $("#fColumn").innerHTML = COLUMNS.map(c=>`<option value="${c.id}">${c.name}</option>`).join("");
-
-      let item = null;
-      if(!isNew) item = state.items.find(i=>i.id===id);
-
-      $("#fBmId").value = item?.bmId || "";
-      $("#fColumn").value = item?.column || "standby";
-      $("#fQuality").value = item?.quality || "MEDIA";
-      $("#fNumbers").value = (item?.numbers || []).join("\n");
-      $("#fNotes").value = item?.notes || "";
-      $("#fCreatedAt").value = item ? `${toBR(item.createdAt)} (${item.createdAt})` : `${toBR(todayISO())} (${todayISO()})`;
-      $("#fUpdatedAt").value = item?.updatedAt || "—";
-      $("#fDisparoDate").value = item?.disparoDate || "";
-      $("#fDisparoWeekday").value = item?.disparoWeekday || "";
-      $("#fIsDone").checked = !!item?.isDone;
-      $("#fDoneAt").value = item?.doneAt || "";
-
-      const lock = !canEdit();
-      ["fBmId","fColumn","fQuality","fNumbers","fNotes","fDisparoDate","fDisparoWeekday","fIsDone","fDoneAt"].forEach(id=>{
-        const el = document.getElementById(id);
-        if(el) el.disabled = lock;
-      });
-      $("#btnSave").disabled = lock;
-      $("#btnDelete").style.display = (isNew || lock) ? "none" : "inline-flex";
-      $("#editHint").textContent = !hasOnline() ? "Modo: Local" : (canSync() ? "Modo: Online (edição)" : "Modo: Online (leitura)");
-
-      $("#numbersCount").textContent = `${normalizeNumbers($("#fNumbers").value).length}/10`;
-
-      $("#modalBackdrop").classList.add("open");
-      $("#modalBackdrop").setAttribute("aria-hidden", "false");
-    }
-    function closeModal(){
-      $("#modalBackdrop").classList.remove("open");
-      $("#modalBackdrop").setAttribute("aria-hidden", "true");
-      currentId = null;
-    }
-
-    // ======= Settings modal =======
-    function openSettings(){
-      $("#sApiUrl").value = settings.apiUrl || "";
-      $("#sEditKey").value = settings.editKey || "";
-      $("#sEditor").value = settings.editorName || "";
-      $("#pingResult").textContent = "—";
-      $("#settingsBackdrop").classList.add("open");
-      $("#settingsBackdrop").setAttribute("aria-hidden","false");
-    }
-    function closeSettings(){
-      $("#settingsBackdrop").classList.remove("open");
-      $("#settingsBackdrop").setAttribute("aria-hidden","true");
-    }
-
-    // ======= Import Programação modal =======
-    function openImportProg(){
-      $("#importProgText").value = "";
-      $("#importProgBackdrop").classList.add("open");
-      $("#importProgBackdrop").setAttribute("aria-hidden","false");
-      setTimeout(()=>$("#importProgText").focus(), 60);
-    }
-    function closeImportProg(){
-      $("#importProgBackdrop").classList.remove("open");
-      $("#importProgBackdrop").setAttribute("aria-hidden","true");
-    }
-
-    // ======= Events =======
-    $("#btnAdd").addEventListener("click", ()=>openModal(null));
-    $("#btnClose").addEventListener("click", closeModal);
-    $("#btnCancel").addEventListener("click", closeModal);
-    $("#modalBackdrop").addEventListener("click", (e)=>{ if(e.target === $("#modalBackdrop")) closeModal(); });
-
-    $("#fNumbers").addEventListener("input", ()=>{ $("#numbersCount").textContent = `${normalizeNumbers($("#fNumbers").value).length}/10`; });
-
-    $("#btnSave").addEventListener("click", ()=>{
-      if(!canEdit()) return;
-      const bmId = $("#fBmId").value.trim();
-      if(!bmId){ toast("Informe a identificação da BM."); $("#fBmId").focus(); return; }
-
-      const numbers = normalizeNumbers($("#fNumbers").value);
-      const column = $("#fColumn").value;
-      const quality = $("#fQuality").value;
-      const notes = $("#fNotes").value.trim();
-      const disparoDate = $("#fDisparoDate").value;
-      const disparoWeekday = $("#fDisparoWeekday").value;
-      const isDone = $("#fIsDone").checked;
-      const doneAt = $("#fDoneAt").value || (isDone ? todayISO() : "");
-
-      if(currentId) updateItem(currentId, { bmId, column, quality, numbers, notes, disparoDate, disparoWeekday, isDone, doneAt });
-      else createItem({ bmId, column, quality, numbers, notes, createdAt: todayISO(), disparoDate, disparoWeekday, isDone, doneAt });
-
-      closeModal();
+      renderAgendaProg();
+      toast(`Importado: ${count} linha(s).`);
     });
 
-    $("#btnDelete").addEventListener("click", ()=>{
-      if(!canEdit() || !currentId) return;
-      const it = state.items.find(i=>i.id===currentId);
-      if(!it) return;
-      const ok = confirm(`Excluir "${it.bmId}"?`);
-      if(!ok) return;
-      deleteItem(currentId);
-      closeModal();
-    });
+    // ---------- AGENDA ----------
+    function renderAgendaProg(){
+      const wrap=$("#agendaProg");
+      wrap.innerHTML="";
+      const byDate=new Map();
+      for(const d of (state.dispatches||[])){
+        if(!d.date) continue;
+        if(!byDate.has(d.date)) byDate.set(d.date, []);
+        byDate.get(d.date).push(d);
+      }
+      const dates=[...byDate.keys()].sort();
+      if(!dates.length){
+        wrap.innerHTML = `<div class="muted">Sem programação cadastrada.</div>`;
+        return;
+      }
+      for(const date of dates){
+        const arr=byDate.get(date).slice();
+        const total=arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
+        const box=document.createElement("div");
+        box.className="panel";
+        box.style.marginBottom="12px";
+        box.innerHTML = `<h3>📅 ${toBR(date)} • Total ${total}</h3>`;
+        for(const b of BUCKETS.map(x=>x.id)){
+          const sub=arr.filter(x=>(x.bucket||"GBR_CLT")===b).sort((a,c)=>String(a.time||"").localeCompare(String(c.time||"")));
+          if(!sub.length) continue;
+          const t=sub.reduce((a,x)=>a+(Number(x.qty)||0),0);
+          const table=document.createElement("table");
+          table.className="table";
+          table.innerHTML = `
+            <thead>
+              <tr><th colspan="4">${bucketLabel(b)} • Total ${t}</th></tr>
+              <tr><th style="width:110px">Hora</th><th style="width:140px">4 dígitos</th><th style="width:120px">Qtd</th><th>Operador</th></tr>
+            </thead>
+            <tbody>
+              ${sub.map(d=>`<tr><td>${escapeHtml(d.time||"")}</td><td class="mono">${escapeHtml(d.code||"")}</td><td><b>${Number(d.qty||0)}</b></td><td>${escapeHtml((d.operator||"").toUpperCase())}</td></tr>`).join("")}
+            </tbody>
+          `;
+          box.appendChild(table);
+          const hr=document.createElement("div"); hr.className="hr"; box.appendChild(hr);
+        }
+        wrap.appendChild(box);
+      }
+    }
 
-    // Search / filter
-    $("#search").addEventListener("input", render);
-    $("#filterQuality").addEventListener("change", render);
+    function renderAgendaBms(){
+      const wrap=$("#agendaBms");
+      const items=(state.items||[]).filter(i=>i.disparoDate || i.disparoWeekday);
+      if(!items.length){
+        wrap.innerHTML = `<div class="muted">Sem agendamentos de BM.</div>`;
+        return;
+      }
+      // group by date or weekday
+      const groups=new Map();
+      for(const it of items){
+        const key = it.disparoDate ? ("D:"+it.disparoDate) : ("W:"+it.disparoWeekday);
+        if(!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(it);
+      }
+      const keys=[...groups.keys()].sort();
+      wrap.innerHTML = "";
+      for(const k of keys){
+        const arr=groups.get(k);
+        const label = k.startsWith("D:") ? ("📅 "+toBR(k.slice(2))) : ("🗓️ "+k.slice(2));
+        const div=document.createElement("div");
+        div.className="row";
+        div.innerHTML = `<div class="row-left"><div><b>${label}</b></div><div class="small">${arr.length} BM(s)</div></div>
+                         <div class="row-right"><span class="kbd">BMs</span></div>`;
+        wrap.appendChild(div);
+      }
+    }
 
-    // Tabs
+    // ---------- Tabs ----------
     function setTab(which){
-      const isBoard = which === "board";
-      const isAgenda = which === "agenda";
-      const isProg = which === "prog";
+      const isBoard=which==="board", isAgenda=which==="agenda", isProg=which==="prog";
       $("#tabBoard").classList.toggle("active", isBoard);
       $("#tabAgenda").classList.toggle("active", isAgenda);
       $("#tabProg").classList.toggle("active", isProg);
       $("#viewBoard").style.display = isBoard ? "block" : "none";
       $("#viewAgenda").style.display = isAgenda ? "block" : "none";
       $("#viewProg").style.display = isProg ? "block" : "none";
-      if(isProg) renderProg();
+      if(isAgenda){ renderAgendaProg(); renderAgendaBms(); }
+      if(isProg){ renderProg(); }
+      if(isBoard){ renderBoard(); }
     }
+
     $("#tabBoard").addEventListener("click", ()=>setTab("board"));
     $("#tabAgenda").addEventListener("click", ()=>setTab("agenda"));
     $("#tabProg").addEventListener("click", ()=>setTab("prog"));
 
-    // Export / Import / Reset
-    $("#btnExport").addEventListener("click", ()=>{
-      const data = JSON.stringify(state, null, 2);
-      const blob = new Blob([data], {type:"application/json"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `organizador_bms_${todayISO()}.json`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      toast("Exportado.");
-    });
-
-    $("#btnImport").addEventListener("click", ()=> $("#importFile").click());
-    $("#importFile").addEventListener("change", async (e)=>{
-      if(!canEdit()){ toast("Somente leitura."); e.target.value=""; return; }
-      const file = e.target.files?.[0];
-      if(!file) return;
+    $("#btnAdd").addEventListener("click", ()=>openBm(null));
+    $("#btnRefresh").addEventListener("click", async ()=>{
       try{
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        if(!parsed || !Array.isArray(parsed.items)) throw new Error("Formato inválido.");
-        if(!Array.isArray(parsed.dispatches)) parsed.dispatches = [];
-        state.items = parsed.items;
-        state.dispatches = parsed.dispatches;
-        saveCache();
-        render();
-        scheduleSync();
-        toast("Importado.");
-      }catch(err){
-        console.error(err);
-        toast("Falha ao importar (arquivo inválido).");
-      }finally{
-        e.target.value = "";
-      }
-    });
-
-    $("#btnReset").addEventListener("click", ()=>{
-      if(!canEdit()){ toast("Somente leitura."); return; }
-      const ok = confirm("Isso vai apagar tudo deste navegador (e do online se estiver em edição). Continuar?");
-      if(!ok) return;
-      state = { items: [], dispatches: [] };
-      seedIfEmpty();
-      saveCache();
-      render();
-      scheduleSync();
-      toast("Dados limpos.");
-    });
-
-    // Settings modal
-    $("#btnSettings").addEventListener("click", openSettings);
-    $("#btnSettingsClose").addEventListener("click", closeSettings);
-    $("#btnSettingsCancel").addEventListener("click", closeSettings);
-    $("#settingsBackdrop").addEventListener("click", (e)=>{ if(e.target === $("#settingsBackdrop")) closeSettings(); });
-
-    $("#btnSettingsSave").addEventListener("click", async ()=>{
-      settings.apiUrl = ($("#sApiUrl").value || "").trim();
-      settings.editKey = ($("#sEditKey").value || "").trim();
-      settings.editorName = ($("#sEditor").value || "").trim();
-      saveSettings();
-      closeSettings();
-      toast("Config salva. Conectando…");
-      dirty = false; syncing = false; lastRemoteSig = "";
-      await bootstrap();
-    });
-
-    $("#btnClearSettings").addEventListener("click", ()=>{
-      const ok = confirm("Limpar configuração online deste navegador?");
-      if(!ok) return;
-      settings = { apiUrl:"", editKey:"", editorName:"" };
-      saveSettings();
-      closeSettings();
-      toast("Config limpa.");
-      dirty = false; syncing = false; lastRemoteSig = "";
-      updateEditUI();
-      render();
-    });
-
-    $("#btnPing").addEventListener("click", async ()=>{
-      const url = ($("#sApiUrl").value || "").trim();
-      if(!url){ $("#pingResult").textContent = "Informe a URL."; return; }
-      $("#pingResult").textContent = "Testando…";
-      try{
-        const res = await fetch(url, { method:"GET", cache:"no-store" });
-        if(!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
-        if(!data || !Array.isArray(data.items)) throw new Error("Formato inválido");
-        $("#pingResult").textContent = "OK — retornou {items:[…]}";
+        const remote = await apiGET();
+        state = remote;
+        lastSig = signatureOf(state);
+        renderAll();
+        toast("Recarregado do online.");
       }catch(e){
-        $("#pingResult").textContent = "Falhou — " + (e?.message || "erro");
+        toast("Falha ao recarregar do online.");
+      }
+    });
+    $("#btnSave").addEventListener("click", async ()=>{
+      if(!canEdit()) return toast("Leitura. Abra o link de edição.");
+      try{
+        syncing=true; setModeUI();
+        await apiPOST();
+        syncing=false; dirty=false;
+        lastSig=signatureOf(state);
+        setModeUI();
+        toast("Salvo.");
+      }catch(e){
+        syncing=false; setModeUI();
+        toast("Erro: " + (e.message||""));
       }
     });
 
-    // Programação events
-    $("#progDate").addEventListener("change", ()=>renderProg());
-    $("#btnAddLine").addEventListener("click", ()=>addDispatchRow({operator:"", code:"", qty:0, time:""}));
-    $("#btnGenerate").addEventListener("click", ()=>{
-      const t = generateText(getProgDate());
-      $("#progOutput").textContent = t;
-      toast("Texto gerado.");
-    });
+    $("#search").addEventListener("input", renderBoard);
+    $("#progDate").addEventListener("change", renderProg);
+    $("#progBucket").addEventListener("change", renderProg);
+    $("#btnAddLine").addEventListener("click", addLine);
+    $("#btnImport").addEventListener("click", openImport);
+    $("#btnGenerate").addEventListener("click", ()=>{ $("#progOutput").textContent = generateText(getProgDate(), getProgBucket()); toast("Texto gerado."); });
     $("#btnCopy").addEventListener("click", async ()=>{
-      const text = $("#progOutput").textContent || "";
-      if(!text.trim()){ toast("Nada para copiar."); return; }
-      try{
-        await navigator.clipboard.writeText(text);
-        toast("Copiado.");
-      }catch(e){
-        // fallback
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        ta.remove();
-        toast("Copiado.");
-      }
+      const text=$("#progOutput").textContent||"";
+      if(!text.trim()) return toast("Nada para copiar.");
+      try{ await navigator.clipboard.writeText(text); toast("Copiado."); }
+      catch(e){ toast("Não consegui copiar automaticamente."); }
     });
-    $("#btnImportText").addEventListener("click", ()=>openImportProg());
-    $("#btnImportProgClose").addEventListener("click", closeImportProg);
-    $("#btnImportProgCancel").addEventListener("click", closeImportProg);
-    $("#importProgBackdrop").addEventListener("click", (e)=>{ if(e.target === $("#importProgBackdrop")) closeImportProg(); });
-    $("#btnImportProgRun").addEventListener("click", ()=>{
-      if(!canEdit()){ toast("Somente leitura."); return; }
-      const txt = $("#importProgText").value || "";
-      const count = parseProgramText(txt, getProgDate());
-      closeImportProg();
-      toast(`Importado: ${count} linha(s).`);
+
+    function renderAll(){
+      renderBoard();
       renderProg();
-    });
+      renderAgendaProg();
+      renderAgendaBms();
+      setModeUI();
+    }
 
-    // Keyboard
-    document.addEventListener("keydown", (e)=>{
-      if(e.key === "Escape"){
-        if($("#modalBackdrop").classList.contains("open")) closeModal();
-        if($("#settingsBackdrop").classList.contains("open")) closeSettings();
-        if($("#importProgBackdrop").classList.contains("open")) closeImportProg();
+    async function init(){
+      parseHash();
+      $("#progDate").value = todayISO();
+      setModeUI();
+      try{
+        state = await apiGET();
+        lastSig = signatureOf(state);
+        renderAll();
+        setInterval(poll, 10000);
+      }catch(e){
+        toast("Falha ao carregar do online. Verifique o Deploy do Apps Script.");
+        renderAll();
       }
-      if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k"){
-        e.preventDefault(); $("#search").focus();
-      }
-      if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n"){
-        e.preventDefault();
-        if(canEdit()) openModal(null);
-        else toast("Somente leitura.");
-      }
-    });
+    }
 
-    // ======= INIT =======
-    bootstrap();
+    init();
   </script>
 </body>
 </html>
