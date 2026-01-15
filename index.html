@@ -3,8 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Organizador — Agenda e BMs (Online)</title>
-  <meta name="theme-color" content="#0b1220" />
+  <title>Organizador Online — BMs + Programação</title>
   <style>
     :root{
       --bg:#0b1220;
@@ -35,7 +34,7 @@
       color:var(--text);
     }
     button, input, select, textarea{font:inherit;color:inherit}
-    .app{max-width:1600px;margin:0 auto;padding:18px 16px 28px;}
+    .app{max-width:1550px;margin:0 auto;padding:18px 16px 28px;}
     .topbar{
       display:flex;gap:12px;align-items:center;justify-content:space-between;
       padding:14px 14px;
@@ -76,9 +75,8 @@
       border-radius:999px;
       color: var(--muted);
       font-size:12px;
-      white-space:nowrap;
     }
-    .pill input{border:0;outline:0;background:transparent;color:var(--text);min-width:200px}
+    .pill input{border:0;outline:0;background:transparent;color:var(--text);min-width:220px}
     .btn{
       border:1px solid var(--line);
       background: rgba(255,255,255,.05);
@@ -98,10 +96,14 @@
       border:1px solid rgba(79,156,255,.55);
       box-shadow: 0 10px 24px rgba(79,156,255,.18);
     }
+    .btn.danger{
+      background: linear-gradient(135deg, rgba(255,91,91,.9), rgba(255,91,91,.25));
+      border:1px solid rgba(255,91,91,.55);
+    }
     .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.25)}
     .dot.good{background:var(--good)} .dot.mid{background:var(--mid)} .dot.bad{background:var(--bad)}
     .content{margin-top:14px;}
-    .grid2{display:grid;grid-template-columns: 1fr 1fr;gap:12px;}
+    .grid2{display:grid;grid-template-columns: 1.25fr .75fr;gap:12px;}
     @media(max-width:980px){.grid2{grid-template-columns:1fr}.pill input{min-width:160px}.brand{min-width:0}}
     .panel{
       background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
@@ -111,30 +113,12 @@
       padding: 12px;
     }
     .panel h3{margin:6px 0 10px;font-size:14px;letter-spacing:.2px}
-    .muted{color:var(--muted);font-size:12px}
     .hr{height:1px;background:rgba(255,255,255,.08);margin:10px 0}
-    .chip{
-      font-size:12px;padding:6px 8px;border-radius:999px;
-      background: rgba(26,42,73,.55);
-      border:1px solid rgba(255,255,255,.10);
-      color: var(--muted);
-      display:inline-flex;gap:6px;align-items:center;
-    }
-    .chip strong{color:var(--text);font-weight:600}
-    .mono{font-family:var(--mono)}
-    .table{
-      width:100%;
-      border-collapse:separate;border-spacing:0;
-      overflow:hidden;border:1px solid rgba(255,255,255,.10);
-      border-radius: 14px;background: rgba(255,255,255,.03);
-      margin-top:10px;
-    }
-    .table th,.table td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);font-size:12px;vertical-align:middle}
-    .table th{color:var(--muted);background:rgba(255,255,255,.03);text-align:left;position:sticky;top:0;z-index:1}
-    .table tr:last-child td{border-bottom:0}
+    .muted{color:var(--muted);font-size:12px}
+    /* Board */
     .board{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;}
     .col{
-      min-width:330px;
+      min-width:320px;
       background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
       border:1px solid var(--line);
       border-radius: var(--radius);
@@ -163,6 +147,7 @@
       cursor: grab;
     }
     .card.readonly{cursor:default}
+    .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
     .bm-id{
       font-family:var(--mono);font-size:12px;letter-spacing:.2px;
       background: rgba(26,42,73,.7);
@@ -172,22 +157,52 @@
       max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
     }
     .meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;}
-    details{
+    .chip{
+      font-size:12px;padding:6px 8px;border-radius:999px;
+      background: rgba(26,42,73,.55);
       border:1px solid rgba(255,255,255,.10);
-      border-radius:14px;
+      color: var(--muted);
+      display:inline-flex;gap:6px;align-items:center;
+    }
+    .chip strong{color:var(--text);font-weight:600}
+    .qdot{width:8px;height:8px;border-radius:999px;display:inline-block;}
+    .qdot.good{background:var(--good)} .qdot.mid{background:var(--mid)} .qdot.bad{background:var(--bad)}
+    .small{font-size:12px;color:var(--muted);line-height:1.35;}
+    .iconbtn{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      width:36px;height:36px;border-radius:12px;
+      cursor:pointer;display:grid;place-items:center;
+    }
+    .iconbtn:disabled{opacity:.45; cursor:not-allowed}
+    .warn{color: rgba(255,91,91,.92);font-weight:600;}
+    /* Table */
+    .table{
+      width:100%;
+      border-collapse:separate;border-spacing:0;
+      overflow:hidden;border:1px solid rgba(255,255,255,.10);
+      border-radius: 14px;background: rgba(255,255,255,.03);
+    }
+    .table th,.table td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);font-size:12px;vertical-align:middle}
+    .table th{color:var(--muted);background:rgba(255,255,255,.03);text-align:left;position:sticky;top:0;z-index:1}
+    .table tr:last-child td{border-bottom:0}
+    .cell{
+      width:100%;
+      border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.03);
-      padding:10px;
+      border-radius:10px;
+      padding:8px 8px;
+      outline:none;
+      font-size:12px;
     }
-    details summary{
-      cursor:pointer;
-      list-style:none;
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:center;
+    .cell:focus{box-shadow: var(--focus); border-color: rgba(79,156,255,.55)}
+    .cell:disabled{opacity:.55}
+    pre.output{
+      margin:0;padding:12px;border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;background:rgba(0,0,0,.25);
+      color:var(--text);font-family:var(--mono);font-size:12px;line-height:1.5;
+      min-height:420px;white-space:pre-wrap;word-break:break-word;
     }
-    details summary::-webkit-details-marker{display:none}
-    .summary-right{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
     .toast{
       position:fixed;right:16px;bottom:16px;
       background: rgba(20,34,60,.92);
@@ -198,22 +213,17 @@
       display:none;max-width:560px;z-index:20;
     }
     .toast.show{display:block}
-    .filterbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .filterleft{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .filterright{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
-    .checkgroup{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .check{
-      display:inline-flex;gap:8px;align-items:center;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      padding:8px 10px;
-      border-radius:999px;
-      color: var(--muted);
-      font-size:12px;
-      cursor:pointer;
-      user-select:none;
-    }
-    .check input{accent-color: var(--accent); transform: scale(1.05)}
+    /* Modal */
+    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:50;padding:14px}
+    .backdrop.open{display:grid}
+    .modal{width:min(980px,100%);background:linear-gradient(180deg, rgba(16,31,54,.98), rgba(15,26,46,.98));
+      border:1px solid rgba(255,255,255,.14);border-radius:18px;box-shadow:0 28px 70px rgba(0,0,0,.55);overflow:hidden}
+    .modal-header{padding:14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
+    .modal-body{padding:14px;display:grid;grid-template-columns:1.15fr .85fr;gap:12px}
+    @media(max-width:920px){.modal-body{grid-template-columns:1fr}}
+    .modal-footer{padding:14px;display:flex;justify-content:space-between;gap:10px;border-top:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.02);flex-wrap:wrap}
+    .field{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.03)}
+    .field label{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
@@ -223,18 +233,18 @@
         <div class="logo"></div>
         <div class="title">
           <b>Organizador</b>
-          <span>Leitor: Agenda + BMs • Editor: Programação + Agenda + BMs</span>
+          <span>ONLINE fixo (/exec) • Leitura para todos • Edição via #edit=1&key=...</span>
         </div>
       </div>
 
       <div class="controls">
         <div class="tabs">
-          <button class="tab" id="tabAgenda">Agenda</button>
-          <button class="tab" id="tabBms">BMs</button>
+          <button class="tab" id="tabBoard">BMs</button>
+          <button class="tab active" id="tabAgenda">Agenda</button>
           <button class="tab" id="tabProg">Programação</button>
         </div>
 
-        <div class="statuspill">
+        <div class="pill" title="Status">
           <span class="dot" id="modeDot"></span>
           <span id="modeText">Carregando…</span>
         </div>
@@ -243,16 +253,24 @@
           🔎 <input id="search" placeholder="Buscar..." />
         </div>
 
+        <button class="btn primary" id="btnAdd" disabled>＋ Nova BM</button>
+        <button class="btn" id="btnRefresh">Recarregar</button>
         <button class="btn primary" id="btnSave" disabled>Salvar</button>
       </div>
     </div>
 
     <div class="content">
+      <!-- BOARD -->
+      <div id="viewBoard" style="display:none">
+        <div class="board" id="board"></div>
+      </div>
+
       <!-- AGENDA -->
-      <div id="viewAgenda" style="display:none">
-        <div class="panel">
-          <div class="filterbar">
-            <div class="filterleft">
+      <div id="viewAgenda">
+        
+        <div class="panel" style="margin-bottom:12px">
+          <div class="controls" style="justify-content:space-between; align-items:center">
+            <div class="controls" style="justify-content:flex-start">
               <div class="pill"><span>📅 De</span><input id="fFrom" type="date" style="min-width:140px"></div>
               <div class="pill"><span>Até</span><input id="fTo" type="date" style="min-width:140px"></div>
               <div class="pill"><span>🔽</span>
@@ -263,70 +281,53 @@
                 </select>
               </div>
             </div>
-            <div class="filterright">
+            <div class="controls">
               <span class="chip"><strong id="agendaCount">0</strong> itens</span>
               <button class="btn" id="btnApply">Aplicar</button>
             </div>
           </div>
-
-          <div class="checkgroup" aria-label="Filtro por carteira">
-            <label class="check"><input type="checkbox" class="bucket" value="GBR_CLT" checked> GBR CLT</label>
-            <label class="check"><input type="checkbox" class="bucket" value="GBR" checked> GBR</label>
-            <label class="check"><input type="checkbox" class="bucket" value="3P" checked> 3P</label>
-            <label class="check"><input type="checkbox" class="bucket" value="3P_PORT" checked> 3P PORT</label>
-          </div>
-
           <div class="hr"></div>
-
-          <div class="grid2">
-            <div class="panel" style="margin:0">
-              <h3>Agenda da Programação</h3>
-              <div class="muted">Organizada por <b>Data</b> e por <b>Carteira</b> (com totais). Clique para expandir.</div>
-              <div class="hr"></div>
-              <div id="agendaProg"></div>
-            </div>
-            <div class="panel" style="margin:0">
-              <h3>Agenda de BMs</h3>
-              <div class="muted">Resumo dos agendamentos das BMs dentro do mesmo filtro de datas.</div>
-              <div class="hr"></div>
-              <div id="agendaBms"></div>
-            </div>
+          <div class="controls" style="justify-content:flex-start; gap:8px; flex-wrap:wrap">
+            <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="GBR_CLT" checked style="accent-color:var(--accent)"> GBR CLT</label>
+            <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="GBR" checked style="accent-color:var(--accent)"> GBR</label>
+            <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="3P" checked style="accent-color:var(--accent)"> 3P</label>
+            <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="3P_PORT" checked style="accent-color:var(--accent)"> 3P PORT</label>
+          </div>
+        </div>
+<div class="grid2">
+          <div class="panel">
+            <h3>Agenda da Programação</h3>
+            <div class="muted">Prioridade: Data • Hora • Quantidade (por carteira).</div>
+            <div class="hr"></div>
+            <div id="agendaProg"></div>
+          </div>
+          <div class="panel">
+            <h3>Agenda de BMs</h3>
+            <div class="muted">Controle paralelo (agendamento das BMs).</div>
+            <div class="hr"></div>
+            <div id="agendaBms"></div>
           </div>
         </div>
       </div>
 
-      <!-- BMs -->
-      <div id="viewBms" style="display:none">
-        <div class="panel">
-          <div class="controls" style="justify-content:space-between">
-            <div>
-              <h3 style="margin:0">BMs</h3>
-              <div class="muted">Board por colunas. (Somente leitura para leitores.)</div>
-            </div>
-            <button class="btn primary" id="btnNewBm" disabled>+ Nova BM</button>
-          </div>
-          <div class="hr"></div>
-          <div class="board" id="bmBoard"></div>
-        </div>
-      </div>
-
-      <!-- Programação (somente editores) -->
+      <!-- PROGRAMAÇÃO -->
       <div id="viewProg" style="display:none">
         <div class="grid2">
           <div class="panel">
             <div class="controls" style="justify-content:space-between;margin-bottom:10px">
               <div class="controls" style="justify-content:flex-start">
-                <div class="pill"><span>📅</span><input id="progDate" type="date" style="min-width:140px"></div>
+                <div class="pill"><span>📅</span><input id="progDate" type="date" style="min-width:140px" /></div>
                 <div class="pill">
                   <span>📌</span>
                   <select id="progBucket" style="border:0;outline:0;background:transparent;color:var(--text)">
                     <option value="GBR_CLT">GBR CLT</option>
-                    <option value="GBR">GBR</option>
-                    <option value="3P">3P</option>
-                    <option value="3P_PORT">3P PORT</option>
+                    <option value="GBR_NOVO">GBR NOVO</option>
+                    <option value="3P_CLT">3P CLT</option>
+                    <option value="3PORT">3PORT</option>
                   </select>
                 </div>
-                <button class="btn" id="btnAddLine" disabled>+ Linha</button>
+                <button class="btn" id="btnAddLine" disabled>＋ Linha</button>
+                <button class="btn" id="btnImport" disabled>Importar texto</button>
               </div>
               <div class="controls">
                 <span class="chip" id="totals"><strong>0</strong> linhas • <strong>0</strong> disparos</span>
@@ -349,9 +350,6 @@
                 <tbody id="progBody"></tbody>
               </table>
             </div>
-
-            <div class="hr"></div>
-            <div class="muted">Dica: Use a Agenda para conferir tudo organizado.</div>
           </div>
 
           <div class="panel">
@@ -363,10 +361,119 @@
     </div>
   </div>
 
+  <!-- BM Modal -->
+  <div class="backdrop" id="bmBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <b id="bmTitle">BM</b>
+        <button class="btn" id="bmClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="field">
+            <label>Identificação da BM</label>
+            <input class="cell" id="fBmId" placeholder="Ex: GBR NOVO - 7436" />
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select class="cell" id="fColumn">
+              <option value="standby">STAND BY</option>
+              <option value="numeros">NÚMEROS</option>
+              <option value="cartao">CARTÃO</option>
+              <option value="template">TEMPLATE</option>
+              <option value="disparos">DISPAROS</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Qualidade</label>
+            <select class="cell" id="fQuality">
+              <option value="APROVADO">Aprovado</option>
+              <option value="MEDIA">Qualidade média</option>
+              <option value="BAIXA">Qualidade baixa (risco)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Números (até 10) — um por linha</label>
+            <textarea class="cell" id="fNumbers" placeholder="11999999999&#10;11888888888"></textarea>
+            <div class="muted">Contagem: <span class="mono" id="fNumbersCount">0/10</span></div>
+          </div>
+          <div class="field">
+            <label>Observações</label>
+            <textarea class="cell" id="fNotes"></textarea>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="field">
+            <label>Criada em</label>
+            <input class="cell" id="fCreatedAt" disabled />
+          </div>
+          <div class="field">
+            <label>Última edição</label>
+            <input class="cell" id="fUpdatedAt" disabled />
+          </div>
+          <div class="field">
+            <label>Agendamento (data)</label>
+            <input class="cell" id="fDisparoDate" type="date" />
+          </div>
+          <div class="field">
+            <label>Agendamento (dia da semana)</label>
+            <select class="cell" id="fDisparoWeekday">
+              <option value="">—</option>
+              <option value="SEGUNDA">Segunda</option>
+              <option value="TERCA">Terça</option>
+              <option value="QUARTA">Quarta</option>
+              <option value="QUINTA">Quinta</option>
+              <option value="SEXTA">Sexta</option>
+              <option value="SABADO">Sábado</option>
+              <option value="DOMINGO">Domingo</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ações</label>
+            <div class="controls" style="justify-content:flex-start">
+              <button class="btn danger" id="bmDelete">Excluir</button>
+            </div>
+            <div class="muted">Edição só no link com <span class="mono">#edit=1&key=...</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="muted" id="bmMode">Leitura</div>
+        <div class="controls">
+          <button class="btn" id="bmCancel">Cancelar</button>
+          <button class="btn primary" id="bmSave">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div class="backdrop" id="importBackdrop">
+    <div class="modal" style="width:min(780px,100%)">
+      <div class="modal-header">
+        <b>Importar texto</b>
+        <button class="btn" id="importClose">✕</button>
+      </div>
+      <div class="modal-body" style="grid-template-columns:1fr">
+        <div class="field">
+          <label>Cole o texto (MARCOS / 5768 - 100 (09:30))</label>
+          <textarea class="cell" id="importText" style="min-height:260px"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="muted">Cria linhas na data + carteira selecionadas.</div>
+        <div class="controls">
+          <button class="btn" id="importCancel">Cancelar</button>
+          <button class="btn primary" id="importRun">Importar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
-    // NÃO ALTERA EXEC
+    // FIXO: todos carregam do mesmo /exec
     const API_URL = "https://script.google.com/macros/s/AKfycbxyWYuCvc5P-LL3LzKOKiyJ6DeQEijd3R23fyIgQ-Q87wf4sylrF4z5sWhfJ6qYCfKH/exec";
 
     const COLUMNS = [
@@ -376,156 +483,42 @@
       { id:"template", name:"TEMPLATE" },
       { id:"disparos", name:"DISPAROS" }
     ];
+    const BUCKETS = [
+      {id:"GBR_CLT",label:"GBR CLT"},
+      {id:"GBR",label:"GBR"},
+      {id:"3P",label:"3P"},
+      {id:"3P_PORT",label:"3P PORT"}
+    ];
 
-    // Normalização: mantém compatibilidade com dados antigos
     function normalizeBucket(raw){
       const b = String(raw||"").trim().toUpperCase();
       if(b === "GBR_NOVO") return "GBR";
       if(b === "3P_CLT") return "3P";
       if(b === "3PORT") return "3P_PORT";
       if(b === "3P PORT") return "3P_PORT";
-      if(b === "GBR") return "GBR";
-      if(b === "GBR_CLT") return "GBR_CLT";
-      if(b === "3P") return "3P";
       if(b === "3P_PORT") return "3P_PORT";
-      return b || "GBR";
-    }
-    function bucketLabel(id){
-      const b = normalizeBucket(id);
-      if(b === "GBR_CLT") return "GBR CLT";
+      if(b === "GBR_CLT") return "GBR_CLT";
       if(b === "GBR") return "GBR";
       if(b === "3P") return "3P";
-      if(b === "3P_PORT") return "3P PORT";
-      return b;
+      return "GBR";
     }
 
-    let state = { items: [], dispatches: [] };
-    let settings = { edit:false, key:"", editor:"" };
-    let syncing=false, dirty=false, lastSig="";
-    let saveTimer=null;
+    function getSelectedBuckets(){
+      const checks = Array.from(document.querySelectorAll("input.bucket"));
+      const selected = checks.filter(c=>c.checked).map(c=>c.value);
+      return new Set(selected);
+    }
 
-    const $ = (s)=>document.querySelector(s);
-    const toast = (m)=>{ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(window.__tt); window.__tt=setTimeout(()=>t.classList.remove("show"), 2200); };
-    const pad2=(n)=>String(n).padStart(2,"0");
-    const todayISO=()=>{ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
-    const addDays=(iso, days)=>{
+    function addDays(iso, days){
       const [y,m,d] = iso.split("-").map(Number);
       const dt = new Date(y, m-1, d);
       dt.setDate(dt.getDate()+days);
       return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
-    };
-    const nowISO=()=>{ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
-    const toBR=(iso)=>{ if(!iso) return "—"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; };
-    const uid=()=> (crypto?.randomUUID?.() || ("id-"+Math.random().toString(16).slice(2)+"-"+Date.now()));
-    const escapeHtml=(s)=>String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
-
-    function parseHash(){
-      const h=(location.hash||"").replace(/^#/,"");
-      const p=new URLSearchParams(h);
-      settings.edit = (p.get("edit")==="1");
-      settings.key = (p.get("key")||"").trim();
-      settings.editor = (p.get("editor")||"").trim();
-    }
-    function canEdit(){ return settings.edit && !!settings.key; }
-
-    function signatureOf(st){
-      const str = JSON.stringify({
-        items:(st.items||[]).map(i=>[i.id,i.bmId,i.column,i.quality,i.createdAt,i.updatedAt,i.disparoDate||"",i.disparoWeekday||"", (i.numbers||[]).join(","), (i.notes||"")]),
-        dispatches:(st.dispatches||[]).map(d=>[d.id,d.date,normalizeBucket(d.bucket),d.operator,d.code,d.qty,d.time])
-      });
-      let h=0; for(let k=0;k<str.length;k++) h=(h*31+str.charCodeAt(k))>>>0;
-      return String(h);
     }
 
-    async function apiGET(){
-      const r = await fetch(API_URL, { cache:"no-store" });
-      const j = await r.json();
-      if(!j || !Array.isArray(j.items)) throw new Error("API inválida");
-      if(!Array.isArray(j.dispatches)) j.dispatches = [];
-      return j;
-    }
-
-    async function apiPOST_bestEffort(){
-      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(settings.key);
-      try{
-        const r = await fetch(url, { method:"POST", body: JSON.stringify(state) });
-        try{ const j = await r.json(); if(j && j.ok===false) throw new Error(j.error || "Falha"); }catch(_){}
-        return true;
-      }catch(e){
-        await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify(state) });
-        await new Promise(res=>setTimeout(res, 800));
-        return true;
-      }
-    }
-
-    function setModeUI(){
-      const dot=$("#modeDot"), text=$("#modeText");
-      dot.className="dot";
-      if(canEdit()){
-        dot.classList.add("good");
-        text.textContent = syncing ? "Edição • salvando…" : "Edição";
-      }else{
-        dot.classList.add("mid");
-        text.textContent = "Leitura";
-      }
-      $("#btnSave").disabled = !canEdit();
-      $("#btnAddLine").disabled = !canEdit();
-      $("#btnImport").disabled = !canEdit();
-      $("#btnNewBm").disabled = !canEdit();
-      // Program tab only for editors
-      $("#tabProg").style.display = canEdit() ? "inline-flex" : "none";
-      $("#viewProg").style.display = (canEdit() && currentTab==="prog") ? "block" : "none";
-    }
-
-    function scheduleSave(){
-      if(!canEdit()) return;
-      dirty=true;
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(async ()=>{
-        try{
-          syncing=true; setModeUI();
-          await apiPOST_bestEffort();
-          // confirm by GET to guarantee readers
-          const remote = await apiGET();
-          state = remote;
-          lastSig = signatureOf(remote);
-          syncing=false; dirty=false;
-          renderAll();
-          setModeUI();
-          toast("Salvo no online.");
-        }catch(e){
-          syncing=false; setModeUI();
-          toast("Erro ao salvar.");
-        }
-      }, 650);
-    }
-
-    async function poll(){
-      try{
-        if(syncing || dirty) return;
-        const remote = await apiGET();
-        const sig = signatureOf(remote);
-        if(!lastSig) lastSig = sig;
-        if(sig !== lastSig){
-          state = remote;
-          lastSig = sig;
-          renderAll();
-        }
-      }catch(e){}
-    }
-
-    // ---- Filters (Agenda) ----
-    function getSelectedBuckets(){
-      const checks = Array.from(document.querySelectorAll("input.bucket"));
-      const selected = checks.filter(c=>c.checked).map(c=>c.value);
-      // values are canonical IDs
-      return new Set(selected);
-    }
-    function getDateFrom(){ return $("#fFrom").value || ""; }
-    function getDateTo(){ return $("#fTo").value || ""; }
     function inDateRange(dateIso){
-      const from = getDateFrom();
-      const to = getDateTo();
+      const from = $("#fFrom")?.value || "";
+      const to = $("#fTo")?.value || "";
       if(from && dateIso < from) return false;
       if(to && dateIso > to) return false;
       return true;
@@ -544,165 +537,162 @@
         $("#fFrom").value = "";
         $("#fTo").value = "";
       }
-      renderAgenda();
+      renderAgendaProg();
+      renderAgendaBms();
     }
 
-    // ---- Agenda rendering ----
-    function renderAgenda(){
-      const bucketSet = getSelectedBuckets();
+    const bucketLabel = (id)=> (BUCKETS.find(b=>b.id===id)?.label || id);
 
-      // Programação agrupada
-      const byDate = new Map();
-      for(const d of (state.dispatches||[])){
-        const date = d.date;
-        if(!date) continue;
-        if(!inDateRange(date)) continue;
-        const b = normalizeBucket(d.bucket);
-        if(!bucketSet.has(b)) continue;
-        if(!byDate.has(date)) byDate.set(date, []);
-        byDate.get(date).push({ ...d, bucket: b });
-      }
-      const dates = Array.from(byDate.keys()).sort();
+    let state = { items: [], dispatches: [] };
+    let settings = { edit:false, key:"", editor:"" };
+    let syncing=false, dirty=false, lastSig="";
+    let saveTimer=null;
 
-      const wrap = $("#agendaProg");
-      wrap.innerHTML = "";
-      let totalLines = 0;
+    const $ = (s)=>document.querySelector(s);
+    const toast = (m)=>{ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(window.__tt); window.__tt=setTimeout(()=>t.classList.remove("show"), 2600); };
+    const pad2=(n)=>String(n).padStart(2,"0");
+    const todayISO=()=>{ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
+    const nowISO=()=>{ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+    const toBR=(iso)=>{ if(!iso) return "—"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; };
+    const uid=()=> (crypto?.randomUUID?.() || ("id-"+Math.random().toString(16).slice(2)+"-"+Date.now()));
+    const escapeHtml=(s)=>String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 
-      if(dates.length === 0){
-        wrap.innerHTML = `<div class="muted">Nenhuma programação no filtro selecionado.</div>`;
-      } else {
-        for(const date of dates){
-          const arr = byDate.get(date).slice();
-          totalLines += arr.length;
-          const total = arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
+    function parseHash(){
+      const h=(location.hash||"").replace(/^#/,"");
+      const p=new URLSearchParams(h);
+      settings.edit = (p.get("edit")==="1");
+      settings.key = (p.get("key")||"").trim();
+      settings.editor = (p.get("editor")||"").trim();
+    }
+    function canEdit(){ return settings.edit && !!settings.key; }
 
-          // totals per bucket
-          const totals = new Map();
-          for(const it of arr){
-            const b = it.bucket;
-            totals.set(b, (totals.get(b)||0) + (Number(it.qty)||0));
-          }
-
-          const det = document.createElement("details");
-          det.open = false;
-          det.innerHTML = `
-            <summary>
-              <div>
-                <div><b>📅 ${toBR(date)}</b></div>
-                <div class="muted">${arr.length} linha(s) • Total <b>${total}</b></div>
-              </div>
-              <div class="summary-right">
-                ${Array.from(totals.entries()).map(([b,t])=>`<span class="chip"><strong>${bucketLabel(b)}:</strong> ${t}</span>`).join("")}
-              </div>
-            </summary>
-          `;
-
-          // details content per bucket
-          const buckets = Array.from(new Set(arr.map(x=>x.bucket))).sort();
-          for(const b of buckets){
-            const sub = arr.filter(x=>x.bucket===b).slice()
-              .sort((x,y)=>(String(x.time||"")).localeCompare(String(y.time||"")) || String(x.code||"").localeCompare(String(y.code||"")));
-            const subTotal = sub.reduce((a,x)=>a+(Number(x.qty)||0),0);
-
-            const section = document.createElement("div");
-            section.style.marginTop = "10px";
-            section.innerHTML = `
-              <div class="controls" style="justify-content:space-between">
-                <div><b>${bucketLabel(b)}</b></div>
-                <span class="chip"><strong>Total</strong> ${subTotal}</span>
-              </div>
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th style="width:110px">Hora</th>
-                    <th style="width:140px">4 dígitos</th>
-                    <th style="width:110px">Qtd</th>
-                    <th>Operador</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${sub.map(d=>`
-                    <tr>
-                      <td>${escapeHtml(d.time||"")}</td>
-                      <td class="mono">${escapeHtml(d.code||"")}</td>
-                      <td><b>${Number(d.qty||0)}</b></td>
-                      <td>${escapeHtml((d.operator||"").toUpperCase())}</td>
-                    </tr>
-                  `).join("")}
-                </tbody>
-              </table>
-            `;
-            det.appendChild(section);
-          }
-
-          wrap.appendChild(det);
-        }
-      }
-
-      // BM agenda summary with same date range
-      const bmw = $("#agendaBms");
-      const scheduled = (state.items||[]).filter(i=> i.disparoDate || i.disparoWeekday );
-      // filter dates only for those with disparoDate
-      const filtered = scheduled.filter(i=>{
-        if(i.disparoDate){
-          return inDateRange(i.disparoDate);
-        }
-        // weekday items always included when filter is wide; if filter has explicit range, still show as separate group
-        return true;
+    function signatureOf(st){
+      const str = JSON.stringify({
+        items:(st.items||[]).map(i=>[i.id,i.bmId,i.column,i.quality,i.createdAt,i.updatedAt,i.disparoDate||"",i.disparoWeekday||"", (i.numbers||[]).join(","), (i.notes||"")]),
+        dispatches:(st.dispatches||[]).map(d=>[d.id,d.date,d.bucket,d.operator,d.code,d.qty,d.time])
       });
-
-      // group by date or weekday
-      const groups = new Map();
-      for(const it of filtered){
-        const k = it.disparoDate ? ("D:"+it.disparoDate) : ("W:"+it.disparoWeekday);
-        if(!groups.has(k)) groups.set(k, []);
-        groups.get(k).push(it);
-      }
-      const keys = Array.from(groups.keys()).sort();
-      bmw.innerHTML = "";
-      if(keys.length === 0){
-        bmw.innerHTML = `<div class="muted">Sem agendamentos de BM no filtro.</div>`;
-      } else {
-        for(const k of keys){
-          const arr = groups.get(k);
-          const label = k.startsWith("D:") ? ("📅 "+toBR(k.slice(2))) : ("🗓️ "+k.slice(2));
-          const div = document.createElement("div");
-          div.className = "panel";
-          div.style.marginBottom = "10px";
-          div.innerHTML = `
-            <div class="controls" style="justify-content:space-between">
-              <div>
-                <div><b>${label}</b></div>
-                <div class="muted">${arr.length} BM(s)</div>
-              </div>
-              <span class="chip"><strong>Agendadas</strong> ${arr.length}</span>
-            </div>
-          `;
-          bmw.appendChild(div);
-        }
-      }
-
-      $("#agendaCount").textContent = String(totalLines);
+      let h=0; for(let k=0;k<str.length;k++) h=(h*31+str.charCodeAt(k))>>>0;
+      return String(h);
     }
 
-    // ---- BMs board ----
+    async function apiGET(){
+      const r = await fetch(API_URL, { cache:"no-store" });
+      const j = await r.json();
+      if(!j || !Array.isArray(j.items)) throw new Error("API inválida");
+      if(!Array.isArray(j.dispatches)) j.dispatches = [];
+      return j;
+    }
+
+    async function apiPOST_bestEffort(){
+      // 1) try normal fetch (may fail on CORS)
+      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(settings.key);
+      try{
+        const r = await fetch(url, { method:"POST", body: JSON.stringify(state) });
+        // some deployments return ok JSON; some are opaque if CORS weird
+        try{
+          const j = await r.json();
+          if(j && j.ok===false) throw new Error(j.error || "Falha ao salvar");
+        }catch(_){}
+        return true;
+      }catch(e){
+        // 2) fallback no-cors send (opaque) then confirm by GET
+        try{
+          await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify(state) });
+          await new Promise(res=>setTimeout(res, 800));
+          const remote = await apiGET();
+          // if remote changed, good
+          const sig = signatureOf(remote);
+          if(sig !== lastSig){
+            state = remote;
+            lastSig = sig;
+            return true;
+          }
+          // even if unchanged, still return (could be identical state)
+          return true;
+        }catch(err){
+          throw e;
+        }
+      }
+    }
+
+    function setModeUI(){
+      const dot=$("#modeDot"), text=$("#modeText");
+      dot.className="dot";
+      if(canEdit()){
+        dot.classList.add("good");
+        text.textContent = syncing ? "Edição • salvando…" : "Edição";
+      }else{
+        dot.classList.add("mid");
+        text.textContent = "Leitura (online)";
+      }
+      $("#btnAdd").disabled = !canEdit();
+      $("#btnSave").disabled = !canEdit();
+      $("#btnAddLine").disabled = !canEdit();
+      $("#btnImport").disabled = !canEdit();
+      // Hide Programação for leitores
+      $("#tabProg").style.display = canEdit() ? "inline-flex" : "none";
+      if(!canEdit()){
+        $("#viewProg").style.display = "none";
+        if($("#tabProg").classList.contains("active")){ setTab("agenda"); }
+      }
+
+    }
+
+    function scheduleSave(){
+      if(!canEdit()) return;
+      dirty = true;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async ()=>{
+        try{
+          syncing=true; setModeUI();
+          await apiPOST_bestEffort();
+          syncing=false; dirty=false;
+          // confirm by GET to make sure readers will see
+          const remote = await apiGET();
+          lastSig = signatureOf(remote);
+          state = remote;
+          setModeUI();
+          renderAll();
+          toast("Salvo no online.");
+        }catch(e){
+          syncing=false; setModeUI();
+          toast("Erro ao salvar. Verifique Apps Script/KEY/Deploy.");
+        }
+      }, 650);
+    }
+
+    async function poll(){
+      try{
+        if(syncing || dirty) return;
+        const remote = await apiGET();
+        const sig = signatureOf(remote);
+        if(!lastSig) lastSig = sig;
+        if(sig !== lastSig){
+          state = remote;
+          lastSig = sig;
+          renderAll();
+        }
+      }catch(e){}
+    }
+
+    // ---------- BOARD ----------
     function qdot(q){ return q==="APROVADO" ? "good" : q==="BAIXA" ? "bad" : "mid"; }
     function qualityLabel(q){
       if(q==="APROVADO") return "Aprovado";
       if(q==="BAIXA") return "Qualidade baixa";
       return "Qualidade média";
     }
-    function matchesSearchBm(it){
+    function matchesSearch(it){
       const s = ($("#search").value||"").trim().toLowerCase();
       if(!s) return true;
       const hay = [it.bmId, it.notes||"", it.column||"", it.quality||""].join(" ").toLowerCase();
       return hay.includes(s);
     }
-    function renderBmBoard(){
-      const board=$("#bmBoard");
+    function renderBoard(){
+      const board=$("#board");
       board.innerHTML="";
       for(const col of COLUMNS){
-        const items = (state.items||[]).filter(it=>it.column===col.id).filter(matchesSearchBm);
+        const items = (state.items||[]).filter(it=>it.column===col.id).filter(matchesSearch);
         const colEl=document.createElement("div");
         colEl.className="col";
         colEl.innerHTML = `
@@ -724,7 +714,7 @@
               state.items[idx].column = col.id;
               state.items[idx].updatedAt = nowISO();
               scheduleSave();
-              renderBmBoard();
+              renderBoard();
             }
           });
         }
@@ -741,10 +731,10 @@
                   <span class="chip"><span class="qdot ${qdot(it.quality||"MEDIA")}" style="width:8px;height:8px;border-radius:999px;display:inline-block"></span>
                     <strong>${it.quality==="BAIXA" ? "RISCO" : qualityLabel(it.quality||"MEDIA")}</strong></span>
                 </div>
-                <div class="muted" style="margin-top:8px">${it.notes ? escapeHtml(it.notes).slice(0,100) : "Sem observações."}</div>
+                <div class="small" style="margin-top:8px">${it.notes ? escapeHtml(it.notes).slice(0,140) : "Sem observações."}</div>
               </div>
               <div class="actions">
-                <button class="iconbtn" ${canEdit()?"":"disabled"} title="Editar (somente editor)" disabled>✏️</button>
+                <button class="iconbtn" ${canEdit()?"":"disabled"} data-edit="${it.id}">✏️</button>
               </div>
             </div>
           `;
@@ -754,70 +744,117 @@
               e.dataTransfer.effectAllowed="move";
             });
           }
+          card.querySelector("[data-edit]").addEventListener("click", ()=>openBm(it.id));
           dz.appendChild(card);
         }
         board.appendChild(colEl);
       }
     }
 
-    // ---- Programação (editor only) ----
-    function getProgDate(){ return $("#progDate").value || todayISO(); }
-    function getProgBucket(){ return normalizeBucket($("#progBucket").value || "GBR"); }
-    function listDispatches(date,bucket){
-      return (state.dispatches||[]).filter(d=>d.date===date && normalizeBucket(d.bucket)===bucket);
+    // ---------- BM MODAL ----------
+    let currentBmId = null;
+
+    function normalizeNumbers(text){
+      const arr = String(text||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      const seen = new Set();
+      const out=[];
+      for(const n of arr){ if(!seen.has(n)){ seen.add(n); out.push(n); } }
+      return out.slice(0,10);
     }
-    function computeTotalsProg(date,bucket){
+
+    function openBm(id){
+      const isNew = !id;
+      currentBmId = id || null;
+      const bm = isNew ? null : state.items.find(x=>x.id===id);
+
+      $("#bmTitle").textContent = isNew ? "Nova BM" : "Editar BM";
+      $("#fBmId").value = bm?.bmId || "";
+      $("#fColumn").value = bm?.column || "standby";
+      $("#fQuality").value = bm?.quality || "MEDIA";
+      $("#fNumbers").value = (bm?.numbers || []).join("\n");
+      $("#fNotes").value = bm?.notes || "";
+      $("#fCreatedAt").value = bm ? `${toBR(bm.createdAt)} (${bm.createdAt})` : `${toBR(todayISO())} (${todayISO()})`;
+      $("#fUpdatedAt").value = bm?.updatedAt || "—";
+      $("#fDisparoDate").value = bm?.disparoDate || "";
+      $("#fDisparoWeekday").value = bm?.disparoWeekday || "";
+      $("#fNumbersCount").textContent = `${normalizeNumbers($("#fNumbers").value).length}/10`;
+
+      const lock = !canEdit();
+      ["fBmId","fColumn","fQuality","fNumbers","fNotes","fDisparoDate","fDisparoWeekday"].forEach(k=>{
+        const el = document.getElementById(k);
+        if(el) el.disabled = lock;
+      });
+      $("#bmSave").disabled = lock;
+      $("#bmDelete").disabled = lock || isNew;
+      $("#bmMode").textContent = lock ? "Leitura" : "Edição";
+
+      $("#bmBackdrop").classList.add("open");
+    }
+    function closeBm(){
+      $("#bmBackdrop").classList.remove("open");
+      currentBmId = null;
+    }
+
+    $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent = `${normalizeNumbers($("#fNumbers").value).length}/10`; });
+
+    $("#bmSave").addEventListener("click", ()=>{
+      if(!canEdit()) return;
+      const bmId = ($("#fBmId").value||"").trim();
+      if(!bmId){ toast("Informe a identificação da BM."); return; }
+
+      const patch = {
+        bmId,
+        column: $("#fColumn").value,
+        quality: $("#fQuality").value,
+        numbers: normalizeNumbers($("#fNumbers").value),
+        notes: ($("#fNotes").value||"").trim(),
+        disparoDate: $("#fDisparoDate").value,
+        disparoWeekday: $("#fDisparoWeekday").value,
+        updatedAt: nowISO()
+      };
+
+      if(currentBmId){
+        const idx = state.items.findIndex(x=>x.id===currentBmId);
+        if(idx>=0){
+          state.items[idx] = { ...state.items[idx], ...patch };
+        }
+      }else{
+        state.items.unshift({
+          id: uid(),
+          createdAt: todayISO(),
+          ...patch
+        });
+      }
+
+      scheduleSave();
+      renderAll();
+      closeBm();
+    });
+
+    $("#bmDelete").addEventListener("click", ()=>{
+      if(!canEdit() || !currentBmId) return;
+      if(!confirm("Excluir essa BM?")) return;
+      state.items = state.items.filter(x=>x.id!==currentBmId);
+      scheduleSave();
+      renderAll();
+      closeBm();
+    });
+
+    $("#bmClose").addEventListener("click", closeBm);
+    $("#bmCancel").addEventListener("click", closeBm);
+    $("#bmBackdrop").addEventListener("click", (e)=>{ if(e.target===$("#bmBackdrop")) closeBm(); });
+
+    // ---------- PROGRAMAÇÃO ----------
+    function getProgDate(){ return $("#progDate").value || todayISO(); }
+    function getProgBucket(){ return $("#progBucket").value || "GBR_CLT"; }
+    function listDispatches(date,bucket){ return (state.dispatches||[]).filter(d=>d.date===date && (d.bucket||"GBR_CLT")===bucket); }
+
+    function computeTotals(date,bucket){
       const list = listDispatches(date,bucket);
       const qty = list.reduce((a,x)=>a+(Number(x.qty)||0),0);
       $("#totals").innerHTML = `<strong>${list.length}</strong> linhas • <strong>${qty}</strong> disparos`;
     }
-    function renderProg(){
-      if(!canEdit()) return;
-      const date=getProgDate(), bucket=getProgBucket();
-      const tbody=$("#progBody");
-      tbody.innerHTML="";
-      const list=listDispatches(date,bucket).slice().sort((a,b)=>String(a.time||"").localeCompare(String(b.time||"")));
-      for(const d of list){
-        const tr=document.createElement("tr");
-        tr.innerHTML = `
-          <td><input class="cell" data-id="${d.id}" data-k="operator" value="${escapeHtml(d.operator||"")}"></td>
-          <td><input class="cell" data-id="${d.id}" data-k="code" value="${escapeHtml(d.code||"")}"></td>
-          <td><input class="cell" type="number" data-id="${d.id}" data-k="qty" value="${Number(d.qty||0)}"></td>
-          <td><input class="cell" type="time" data-id="${d.id}" data-k="time" value="${escapeHtml(d.time||"")}"></td>
-          <td><button class="btn" data-del="${d.id}">Del</button></td>
-        `;
-        tbody.appendChild(tr);
-      }
-      tbody.querySelectorAll("input[data-id]").forEach(inp=>{
-        inp.addEventListener("change", ()=>{
-          const id=inp.getAttribute("data-id");
-          const k=inp.getAttribute("data-k");
-          const row=state.dispatches.find(x=>x.id===id);
-          if(!row) return;
-          let v=inp.value;
-          if(k==="operator") v=String(v||"").trim().toUpperCase();
-          if(k==="code") v=String(v||"").trim();
-          if(k==="qty") v=Number(v||0);
-          if(k==="time") v=String(v||"").trim();
-          row[k]=v;
-          row.bucket = bucket; // normalize to selected bucket
-          scheduleSave();
-          renderAgenda();
-          renderProg();
-        });
-      });
-      tbody.querySelectorAll("button[data-del]").forEach(btn=>{
-        btn.addEventListener("click", ()=>{
-          const id=btn.getAttribute("data-del");
-          state.dispatches = state.dispatches.filter(x=>x.id!==id);
-          scheduleSave();
-          renderAgenda();
-          renderProg();
-        });
-      });
-      computeTotalsProg(date,bucket);
-      $("#progOutput").textContent = generateText(date,bucket);
-    }
+
     function generateText(date,bucket){
       const list=listDispatches(date,bucket).slice().sort((a,b)=>String(a.operator||"").localeCompare(String(b.operator||"")) || String(a.time||"").localeCompare(String(b.time||"")));
       const ops=[...new Set(list.map(x=>(x.operator||"").trim().toUpperCase()).filter(Boolean))].sort();
@@ -834,50 +871,264 @@
       return out.join("\n").trim()+"\n";
     }
 
-    function addLine(){
-      if(!canEdit()) return;
+    function renderProg(){
       const date=getProgDate(), bucket=getProgBucket();
-      state.dispatches.unshift({ id: uid(), date, bucket, operator:"", code:"", qty:0, time:"" });
+      const tbody=$("#progBody");
+      tbody.innerHTML="";
+      const editable=canEdit();
+      const list=listDispatches(date,bucket).slice().sort((a,b)=>String(a.time||"").localeCompare(String(b.time||"")));
+      for(const d of list){
+        const tr=document.createElement("tr");
+        tr.innerHTML = `
+          <td><input class="cell" ${editable?"":"disabled"} data-id="${d.id}" data-k="operator" value="${escapeHtml(d.operator||"")}"></td>
+          <td><input class="cell" ${editable?"":"disabled"} data-id="${d.id}" data-k="code" value="${escapeHtml(d.code||"")}"></td>
+          <td><input class="cell" ${editable?"":"disabled"} type="number" data-id="${d.id}" data-k="qty" value="${Number(d.qty||0)}"></td>
+          <td><input class="cell" ${editable?"":"disabled"} type="time" data-id="${d.id}" data-k="time" value="${escapeHtml(d.time||"")}"></td>
+          <td><button class="btn" ${editable?"":"disabled"} data-del="${d.id}">Del</button></td>
+        `;
+        tbody.appendChild(tr);
+      }
+      tbody.querySelectorAll("input[data-id]").forEach(inp=>{
+        inp.addEventListener("change", ()=>{
+          if(!canEdit()) return;
+          const id=inp.getAttribute("data-id");
+          const k=inp.getAttribute("data-k");
+          const row=state.dispatches.find(x=>x.id===id);
+          if(!row) return;
+          let v=inp.value;
+          if(k==="operator") v=String(v||"").trim().toUpperCase();
+          if(k==="code") v=String(v||"").trim();
+          if(k==="qty") v=Number(v||0);
+          if(k==="time") v=String(v||"").trim();
+          row[k]=v;
+          scheduleSave();
+          renderAgendaProg();
+          renderProg();
+        });
+      });
+      tbody.querySelectorAll("button[data-del]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          if(!canEdit()) return;
+          const id=btn.getAttribute("data-del");
+          state.dispatches = state.dispatches.filter(x=>x.id!==id);
+          scheduleSave();
+          renderAgendaProg();
+          renderProg();
+        });
+      });
+      computeTotals(date,bucket);
+      $("#progOutput").textContent = generateText(date,bucket);
+    }
+
+    function addLine(){
+      if(!canEdit()) return toast("Abra o link de edição.");
+      state.dispatches.unshift({ id:uid(), date:getProgDate(), bucket:getProgBucket(), operator:"", code:"", qty:0, time:"" });
       scheduleSave();
       renderProg();
-      renderAgenda();
+      renderAgendaProg();
     }
 
-    // ---- Tabs control ----
-    let currentTab = "agenda";
+    function openImport(){
+      if(!canEdit()) return toast("Abra o link de edição.");
+      $("#importText").value="";
+      $("#importBackdrop").classList.add("open");
+    }
+    function closeImport(){ $("#importBackdrop").classList.remove("open"); }
+
+    function parseProgramText(text){
+      const lines=String(text||"").split(/\r?\n/);
+      let currentOp=""; let count=0;
+      for(const raw of lines){
+        const line=raw.trim();
+        if(!line) continue;
+        const m=line.match(/^(.+?)\s*-\s*(\d+)\s*\((\d{2}:\d{2})\)\s*$/);
+        if(m){
+          const code=m[1].trim();
+          const qty=Number(m[2]||0);
+          const time=m[3].trim();
+          if(!currentOp) currentOp="OPERADOR";
+          state.dispatches.unshift({ id:uid(), date:getProgDate(), bucket:getProgBucket(), operator:currentOp.toUpperCase(), code, qty, time });
+          count++;
+        }else{
+          currentOp=line.toUpperCase();
+        }
+      }
+      return count;
+    }
+
+    $("#importClose").addEventListener("click", closeImport);
+    $("#importCancel").addEventListener("click", closeImport);
+    $("#importBackdrop").addEventListener("click", (e)=>{ if(e.target===$("#importBackdrop")) closeImport(); });
+    $("#importRun").addEventListener("click", ()=>{
+      if(!canEdit()) return;
+      const count = parseProgramText($("#importText").value||"");
+      closeImport();
+      scheduleSave();
+      renderProg();
+      renderAgendaProg();
+      toast(`Importado: ${count} linha(s).`);
+    });
+
+    // ---------- AGENDA ----------
+    function renderAgendaProg(){
+      const wrap=$("#agendaProg");
+      wrap.innerHTML="";
+      const bucketSet = getSelectedBuckets();
+      const byDate=new Map();
+      for(const d of (state.dispatches||[])){
+        if(!d.date) continue;
+        const date = d.date;
+        if(!inDateRange(date)) continue;
+        const b = normalizeBucket(d.bucket);
+        if(!bucketSet.has(b)) continue;
+        if(!byDate.has(date)) byDate.set(date, []);
+        byDate.get(date).push({ ...d, bucket: b });
+      }
+      const dates=[...byDate.keys()].sort();
+      let itemCount = 0;
+
+      if(!dates.length){
+        wrap.innerHTML = `<div class="muted">Nenhuma programação no filtro selecionado.</div>`;
+        $("#agendaCount").textContent = "0";
+        return;
+      }
+
+      for(const date of dates){
+        const arr=byDate.get(date).slice();
+        itemCount += arr.length;
+        const total=arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
+
+        // Totais por carteira
+        const totals = new Map();
+        for(const it of arr){
+          totals.set(it.bucket, (totals.get(it.bucket)||0) + (Number(it.qty)||0));
+        }
+
+        const det=document.createElement("details");
+        det.open = false;
+        det.innerHTML = `
+          <summary>
+            <div>
+              <div><b>📅 ${toBR(date)}</b></div>
+              <div class="muted">${arr.length} linha(s) • Total <b>${total}</b></div>
+            </div>
+            <div class="summary-right">
+              ${Array.from(totals.entries()).sort((a,b)=>a[0].localeCompare(b[0]))
+                .map(([b,t])=>`<span class="chip"><strong>${bucketLabel(b)}:</strong> ${t}</span>`).join("")}
+            </div>
+          </summary>
+        `;
+
+        const buckets = Array.from(new Set(arr.map(x=>x.bucket))).sort();
+        for(const b of buckets){
+          const sub=arr.filter(x=>x.bucket===b).slice()
+            .sort((x,y)=>(String(x.time||"")).localeCompare(String(y.time||"")) || String(x.code||"").localeCompare(String(y.code||"")));
+          const subTotal = sub.reduce((a,x)=>a+(Number(x.qty)||0),0);
+
+          const section=document.createElement("div");
+          section.style.marginTop = "10px";
+          section.innerHTML = `
+            <div class="controls" style="justify-content:space-between;align-items:center">
+              <div><b>${bucketLabel(b)}</b></div>
+              <span class="chip"><strong>Total</strong> ${subTotal}</span>
+            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width:110px">Hora</th>
+                  <th style="width:140px">4 dígitos</th>
+                  <th style="width:110px">Qtd</th>
+                  <th>Operador</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${sub.map(d=>`
+                  <tr>
+                    <td>${escapeHtml(d.time||"")}</td>
+                    <td class="mono">${escapeHtml(d.code||"")}</td>
+                    <td><b>${Number(d.qty||0)}</b></td>
+                    <td>${escapeHtml((d.operator||"").toUpperCase())}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          `;
+          det.appendChild(section);
+        }
+
+        wrap.appendChild(det);
+      }
+
+      $("#agendaCount").textContent = String(itemCount);
+    }
+
+    function renderAgendaBms(){
+      const wrap=$("#agendaBms");
+      const items=(state.items||[]).filter(i=>i.disparoDate || i.disparoWeekday);
+      if(!items.length){
+        wrap.innerHTML = `<div class="muted">Sem agendamentos de BM.</div>`;
+        return;
+      }
+      const groups=new Map();
+      for(const it of items){
+        const key = it.disparoDate ? ("D:"+it.disparoDate) : ("W:"+it.disparoWeekday);
+        if(!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(it);
+      }
+      const keys=[...groups.keys()].sort();
+      wrap.innerHTML = "";
+      for(const k of keys){
+        const arr=groups.get(k);
+        const label = k.startsWith("D:") ? ("📅 "+toBR(k.slice(2))) : ("🗓️ "+k.slice(2));
+        const div=document.createElement("div");
+        div.className="row";
+        div.innerHTML = `<div class="row-left"><div><b>${label}</b></div><div class="small">${arr.length} BM(s)</div></div>
+                         <div class="row-right"><span class="kbd">BMs</span></div>`;
+        wrap.appendChild(div);
+      }
+    }
+
+    // ---------- Tabs ----------
     function setTab(which){
-      currentTab = which;
-      $("#tabAgenda").classList.toggle("active", which==="agenda");
-      $("#tabBms").classList.toggle("active", which==="bms");
-      $("#tabProg").classList.toggle("active", which==="prog");
-      $("#viewAgenda").style.display = which==="agenda" ? "block" : "none";
-      $("#viewBms").style.display = which==="bms" ? "block" : "none";
-      $("#viewProg").style.display = (which==="prog" && canEdit()) ? "block" : "none";
-      if(which==="agenda") renderAgenda();
-      if(which==="bms") renderBmBoard();
-      if(which==="prog") renderProg();
-      setModeUI();
+      const isBoard=which==="board", isAgenda=which==="agenda", isProg=which==="prog";
+      $("#tabBoard").classList.toggle("active", isBoard);
+      $("#tabAgenda").classList.toggle("active", isAgenda);
+      $("#tabProg").classList.toggle("active", isProg);
+      $("#viewBoard").style.display = isBoard ? "block" : "none";
+      $("#viewAgenda").style.display = isAgenda ? "block" : "none";
+      $("#viewProg").style.display = isProg ? "block" : "none";
+      if(isAgenda){ renderAgendaProg(); renderAgendaBms(); }
+      if(isProg){ renderProg(); }
+      if(isBoard){ renderBoard(); }
     }
 
-    // ---- Render all ----
-    function renderAll(){
-      renderAgenda();
-      renderBmBoard();
-      if(canEdit()) renderProg();
-    }
-
-    // ---- UI events ----
+    $("#tabBoard").addEventListener("click", ()=>setTab("board"));
     $("#tabAgenda").addEventListener("click", ()=>setTab("agenda"));
-    $("#tabBms").addEventListener("click", ()=>setTab("bms"));
     $("#tabProg").addEventListener("click", ()=>setTab("prog"));
 
-    $("#btnSave").addEventListener("click", ()=>scheduleSave());
-    $("#btnAddLine").addEventListener("click", addLine);
+    $("#btnAdd").addEventListener("click", ()=>openBm(null));
+    $("#btnRefresh").addEventListener("click", async ()=>{
+      try{
+        const remote = await apiGET();
+        state = remote;
+        lastSig = signatureOf(state);
+        renderAll();
+        toast("Recarregado do online.");
+      }catch(e){
+        toast("Falha ao recarregar do online.");
+      }
+    });
+    $("#btnSave").addEventListener("click", async ()=>{
+      if(!canEdit()) return toast("Leitura. Abra o link de edição.");
+      scheduleSave();
+    });
 
+    $("#search").addEventListener("input", renderBoard);
     $("#progDate").addEventListener("change", renderProg);
     $("#progBucket").addEventListener("change", renderProg);
-
-    $("#btnGenerate").addEventListener("click", ()=>{ if(!canEdit()) return; $("#progOutput").textContent = generateText(getProgDate(), getProgBucket()); toast("Texto gerado."); });
+    $("#btnAddLine").addEventListener("click", addLine);
+    $("#btnImport").addEventListener("click", openImport);
+    $("#btnGenerate").addEventListener("click", ()=>{ $("#progOutput").textContent = generateText(getProgDate(), getProgBucket()); toast("Texto gerado."); });
     $("#btnCopy").addEventListener("click", async ()=>{
       const text=$("#progOutput").textContent||"";
       if(!text.trim()) return toast("Nada para copiar.");
@@ -885,38 +1136,38 @@
       catch(e){ toast("Não consegui copiar automaticamente."); }
     });
 
-    $("#btnNewBm").addEventListener("click", ()=>toast("BM modal não incluso aqui (mantém comportamento atual)."));
+    function renderAll(){
+      renderBoard();
+      renderProg();
+      renderAgendaProg();
+      renderAgendaBms();
+      setModeUI();
+    }
 
-    // Agenda filters
-    $("#btnApply").addEventListener("click", renderAgenda);
-    $("#fQuick").addEventListener("change", applyQuickRange);
-    document.querySelectorAll("input.bucket").forEach(cb=>cb.addEventListener("change", renderAgenda));
-
-    // Search affects BMs view primarily; also can affect agenda if you want later
-    $("#search").addEventListener("input", ()=>{ renderBmBoard(); });
-
-    // ---- Init ----
     async function init(){
       parseHash();
-
-      // default quick range
-      $("#fQuick").value = "7";
-      $("#fFrom").value = todayISO();
-      $("#fTo").value = addDays(todayISO(), 7);
-
-      // program date init
       $("#progDate").value = todayISO();
+      // Agenda filter defaults
+      if($("#fQuick")){
+        $("#fQuick").value = "7";
+        $("#fFrom").value = todayISO();
+        $("#fTo").value = addDays(todayISO(), 7);
+        $("#fQuick").addEventListener("change", applyQuickRange);
+        $("#btnApply").addEventListener("click", ()=>{ renderAgendaProg(); renderAgendaBms(); });
+        document.querySelectorAll("input.bucket").forEach(cb=>cb.addEventListener("change", ()=>{ renderAgendaProg(); renderAgendaBms(); }));
+      }
 
       setModeUI();
-
       try{
         state = await apiGET();
         lastSig = signatureOf(state);
-        // readers start on Agenda; editors keep Agenda as well (less confusion)
+        renderAll();
         setTab("agenda");
+        // Polling para leitores verem atualizações
         setInterval(poll, 10000);
       }catch(e){
-        toast("Falha ao carregar online. Verifique o Deploy do Apps Script.");
+        toast("Falha ao carregar do online. Verifique o Deploy do Apps Script.");
+        renderAll();
         setTab("agenda");
       }
     }
