@@ -306,7 +306,7 @@
       <div class="brand">
         <div class="logo"></div>
         <div class="title">
-          <b>Planejamento - Parceiros</b>
+          <b>Planejamento - Parceiro</b>
           <span id="subtitleReader">ONLINE • Leitura (Agenda + BMs)</span>
           <span id="subtitleEditor" style="display:none">ONLINE • Edição via <span class="mono">#edit=1&key=...</span> • Supervisor via <span class="mono">&supkey=...</span></span>
         </div>
@@ -316,6 +316,7 @@
         <div class="tabs">
           
           <button class="tab active" id="tabAgenda">Agenda</button>
+          <button class="tab" id="tabRodizio">Rodízio do dia</button>
           <button class="tab" id="tabBoard">BMs</button>
           <button class="tab admin" id="tabProg">Programação</button>
           <button class="tab admin" id="tabSupport">Suportes <span class="badge" id="supportBadge" style="display:none">0</span></button>
@@ -388,7 +389,7 @@
           <div class="controls" style="justify-content:flex-start; gap:8px; flex-wrap:wrap">
             <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="GBR_CLT" checked style="accent-color:var(--accent)"> GBR CLT</label>
             <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="GBR" checked style="accent-color:var(--accent)"> GBR</label>
-            <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="3P" checked style="accent-color:var(--accent)"> 3P</label>
+            <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="3P_CLT" checked style="accent-color:var(--accent)"> 3P CLT</label>
             <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="3P_PORT" checked style="accent-color:var(--accent)"> 3P PORT</label>
           </div>
         </div>
@@ -408,7 +409,98 @@
         </div>
       </div>
 
-      <!-- PROGRAMAÇÃO -->
+      
+      <!-- RODÍZIO DO DIA -->
+      <div id="viewRodizio" style="display:none">
+        <div class="panel" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div>
+              <h3 style="margin:0">Rodízio do dia</h3>
+              <div class="muted" id="rodHint" style="margin-top:4px">Leitores enviam o rodízio (Supervisor + Operadores). Apenas editores visualizam.</div>
+            </div>
+            <div class="controls">
+              <button class="btn" id="rodRefresh" style="display:none">Recarregar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reader form -->
+        <div class="panel" id="rodReaderBox" style="display:none">
+          <h3 style="margin-top:0">Enviar rodízio</h3>
+
+          <div style="display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:end;flex-wrap:wrap">
+            <div class="field">
+              <label>Data</label>
+              <input class="cell" id="rodDate" type="date" />
+            </div>
+            <div class="field">
+              <label>Supervisor</label>
+              <input class="cell" id="rodSupervisor" placeholder="Ex: Supervisor X" />
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:240px 1fr;gap:12px;margin-top:12px">
+            <div class="field">
+              <label>Empresa / Produto</label>
+              <select class="cell" id="rodEmpresa">
+                <option value="">Selecione…</option>
+                <option value="GBR_CLT">GBR CLT</option>
+                <option value="GBR">GBR NOVO</option>
+                <option value="3P_CLT">3P CLT</option>
+                <option value="3P_PORT">3P PORT</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Operadores (um por linha)</label>
+              <textarea class="cell" id="rodOperadores" placeholder="Operador 1&#10;Operador 2&#10;Operador 3"></textarea>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top:12px">
+            <label>Observação (opcional)</label>
+            <input class="cell" id="rodObs" placeholder="Ex: colocar no rodízio apenas equipe manhã" />
+          </div>
+
+          <div class="controls" style="margin-top:14px;justify-content:flex-start">
+            <button class="btn primary" id="rodSend">Enviar para o Planejamento</button>
+          </div>
+
+          <div class="muted" style="margin-top:10px">
+            Dica: escreva os operadores exatamente como estão no CRM (evita dúvida na triagem).
+          </div>
+        </div>
+
+        <!-- Editor list -->
+        <div class="panel" id="rodEditorBox" style="display:none">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+            <div class="controls" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+              <div class="pill"><span>📌</span>
+                <select id="rodFilterEmpresa" style="border:0;outline:0;background:transparent;color:var(--text)">
+                  <option value="ALL">Todas empresas</option>
+                  <option value="GBR_CLT">GBR CLT</option>
+                  <option value="GBR">GBR NOVO</option>
+                  <option value="3P_CLT">3P CLT</option>
+                  <option value="3P_PORT">3P PORT</option>
+                </select>
+              </div>
+
+              <div class="pill"><span>📅</span>
+                <input id="rodFilterDate" type="date" style="border:0;outline:0;background:transparent;color:var(--text)" />
+              </div>
+
+              <button class="btn" id="rodClearFilters">Limpar filtros</button>
+            </div>
+
+            <span class="chip"><strong id="rodCount">0</strong> rodízios</span>
+          </div>
+
+          <div class="muted" id="rodDebug" style="margin-top:10px"></div>
+
+          <div id="rodList" style="margin-top:14px;display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+      </div>
+
+<!-- PROGRAMAÇÃO -->
       <div id="viewProg" style="display:none">
         <div class="grid2">
           <div class="panel">
@@ -722,20 +814,20 @@
     const BUCKETS = [
       {id:"GBR_CLT",label:"GBR CLT"},
       {id:"GBR",label:"GBR"},
-      {id:"3P",label:"3P"},
+      {id:"3P_CLT",label:"3P CLT"},
       {id:"3P_PORT",label:"3P PORT"}
     ];
 
     function normalizeBucket(raw){
       const b = String(raw||"").trim().toUpperCase();
       if(b === "GBR_NOVO") return "GBR";
-      if(b === "3P_CLT") return "3P";
+      if(b === "3P_CLT") return "3P_CLT";
       if(b === "3PORT") return "3P_PORT";
       if(b === "3P PORT") return "3P_PORT";
       if(b === "3P_PORT") return "3P_PORT";
       if(b === "GBR_CLT") return "GBR_CLT";
       if(b === "GBR") return "GBR";
-      if(b === "3P") return "3P";
+      if(b === "3P") return "3P_CLT";
       return "GBR";
     }
 
@@ -1384,25 +1476,27 @@ $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent =
     let currentTab = "agenda";
     function setTab(which){
       currentTab = which;
-      const isBoard=which==="board", isAgenda=which==="agenda", isProg=which==="prog", isSupport=which==="support";
+      const isBoard=which==="board", isAgenda=which==="agenda", isRod=which==="rodizio", isProg=which==="prog", isSupport=which==="support";
       $("#tabBoard").classList.toggle("active", isBoard);
       $("#tabAgenda").classList.toggle("active", isAgenda);
+      $("#tabRodizio").classList.toggle("active", isRod);
       $("#tabProg").classList.toggle("active", isProg);
       $("#tabSupport").classList.toggle("active", isSupport);
 
       $("#viewBoard").style.display = isBoard ? "block" : "none";
       $("#viewAgenda").style.display = isAgenda ? "block" : "none";
-      $("#viewProg").style.display = (isProg && canEdit()) ? "block" : "none";
-      $("#viewSupport").style.display = (isSupport && canEdit()) ? "block" : "none";
+      $("#viewRodizio").style.display = isRod ? "block" : "none";
+      $("#viewProg").style.display = isProg ? "block" : "none";
+      $("#viewSupport").style.display = isSupport ? "block" : "none";
 
-      if(isAgenda){ renderAgendaProg(); renderAgendaBms(); }
-      if(isProg){ renderProg(); }
-      if(isSupport){ renderSupportTab(); markSupportSeen(); }
-      if(isBoard){ renderBoard(); }
+      if(isSupport) renderSupportTab();
+      if(isRod) renderRodizio();
     }
+
 
     $("#tabBoard").addEventListener("click", ()=>setTab("board"));
     $("#tabAgenda").addEventListener("click", ()=>setTab("agenda"));
+    $("#tabRodizio").addEventListener("click", ()=>setTab("rodizio"));
     $("#tabProg").addEventListener("click", ()=>setTab("prog"));
       $("#tabSupport").addEventListener("click", ()=>setTab("support"));
       const sRef = document.getElementById("supportRefresh");
@@ -1651,7 +1745,7 @@ $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent =
         if(!data || data.ok === false) return;
         const inbox = Array.isArray(data.inbox) ? data.inbox : [];
         populateSupportRespOptions(inbox);
-        const open = inbox.filter(it=> String(it.status||"OPEN").toUpperCase() !== "DONE");
+        const open = inbox.filter(it=> String(it.status||"OPEN").toUpperCase() !== "DONE" && String(it.tipo||"").toUpperCase() !== "RODIZIO");
         updateSupportBadge(open.length);
 
         // normalmente vem ordenado desc por createdAt
@@ -1760,7 +1854,7 @@ async function supportUpdateItem(payload){
 
         const inbox = Array.isArray(data.inbox) ? data.inbox : [];
         populateSupportRespOptions(inbox);
-        const openCount = inbox.filter(it=> String(it.status||"OPEN").toUpperCase() !== "DONE").length;
+        const openCount = inbox.filter(it=> String(it.status||"OPEN").toUpperCase() !== "DONE" && String(it.tipo||"").toUpperCase() !== "RODIZIO").length;
         updateSupportBadge(openCount);
 
         // latest
@@ -1775,6 +1869,8 @@ async function supportUpdateItem(payload){
 
         const filtered = inbox.filter(it=>{
           const emp = normalizeEmpresa(it.empresa||"");
+          const tipo = String(it.tipo||"").toUpperCase();
+          if(tipo === "RODIZIO") return false;
           const st = String(it.status||"OPEN").toUpperCase();
           const asg = String(it.assignee||it.responsavel||"").trim();
           if(empSel !== "ALL" && emp !== empSel) return false;
