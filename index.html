@@ -224,6 +224,42 @@
     .modal-footer{padding:14px;display:flex;justify-content:space-between;gap:10px;border-top:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.02);flex-wrap:wrap}
     .field{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.03)}
     .field label{font-size:12px;color:var(--muted)}
+  
+    /* --- Suporte (leitores -> editores) --- */
+    .support-fab{
+      position:fixed;right:16px;bottom:16px;z-index:30;
+      width:54px;height:54px;border-radius:18px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(135deg, rgba(79,156,255,.95), rgba(79,156,255,.25));
+      box-shadow: 0 18px 40px rgba(79,156,255,.18);
+      cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      user-select:none;
+    }
+    .support-fab:active{transform:translateY(1px)}
+    .support-fab span{font-size:20px}
+    .inbox-item{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      border-radius:14px;
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .inbox-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .inbox-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .tag{
+      font-size:12px;padding:6px 10px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(26,42,73,.55);
+      color: var(--muted);
+      display:inline-flex;gap:6px;align-items:center;
+      max-width:100%;
+    }
+    .tag strong{color:var(--text)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
   </style>
 </head>
 <body>
@@ -262,6 +298,26 @@
     <div class="content">
       <!-- BOARD -->
       <div id="viewBoard" style="display:none">
+        <div class="panel" style="margin-bottom:12px">
+          <div class="controls" style="justify-content:space-between; align-items:center">
+            <div class="controls" style="justify-content:flex-start">
+              <div class="pill"><span>🏢 Empresa</span>
+                <select id="bmEmpresaFilter" style="border:0;outline:0;background:transparent;color:var(--text)">
+                  <option value="ALL">Todas</option>
+                  <option value="GBR_CLT">GBR CLT</option>
+                  <option value="GBR_NOVO">GBR NOVO</option>
+                  <option value="3P_CLT">3P CLT</option>
+                  <option value="3PORT">3PORT</option>
+                  <option value="SEM">Sem empresa</option>
+                </select>
+              </div>
+              <div class="muted" style="margin-left:6px">Filtro vale para todas as colunas.</div>
+            </div>
+            <div class="controls">
+              <span class="chip"><strong id="bmCount">0</strong> BMs</span>
+            </div>
+          </div>
+        </div>
         <div class="board" id="board"></div>
       </div>
 
@@ -375,6 +431,17 @@
             <input class="cell" id="fBmId" placeholder="Ex: GBR NOVO - 7436" />
           </div>
           <div class="field">
+            <label>Empresa / Produto</label>
+            <select class="cell" id="fEmpresa">
+              <option value="">Selecione…</option>
+              <option value="GBR_CLT">GBR CLT</option>
+              <option value="GBR_NOVO">GBR NOVO</option>
+              <option value="3P_CLT">3P CLT</option>
+              <option value="3PORT">3PORT</option>
+            </select>
+            <div class="muted">Obrigatório para filtrar o board por empresa.</div>
+          </div>
+          <div class="field">
             <label>Status</label>
             <select class="cell" id="fColumn">
               <option value="standby">STAND BY</option>
@@ -470,13 +537,145 @@
     </div>
   </div>
 
+  
+  <!-- Suporte (leitores -> editores) -->
+  <div class="support-fab" id="supportFab" title="Suporte / Sugestões">
+    <span>💬</span>
+  </div>
+
+  <div class="backdrop" id="supportBackdrop">
+    <div class="modal" style="width:min(980px,100%)">
+      <div class="modal-header">
+        <b>Suporte / Sugestões</b>
+        <button class="btn" id="supportClose">✕</button>
+      </div>
+      <div class="modal-body" style="grid-template-columns:1fr 1fr">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="field">
+            <label>Seu nome / cargo (ex: Supervisor X)</label>
+            <input class="cell" id="supSender" placeholder="Ex: Supervisor X" />
+          </div>
+          <div class="field">
+            <label>Empresa / Produto</label>
+            <select class="cell" id="supEmpresa">
+              <option value="GBR_CLT">GBR CLT</option>
+              <option value="GBR_NOVO">GBR NOVO</option>
+              <option value="3P_CLT">3P CLT</option>
+              <option value="3PORT">3PORT</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tipo</label>
+            <select class="cell" id="supTipo">
+              <option value="PEDIDO">Pedido</option>
+              <option value="SUGESTAO">Sugestão</option>
+              <option value="ALERTA">Alerta</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Mensagem</label>
+            <textarea class="cell" id="supMsg" placeholder="Descreva o que precisa / sugestão..." style="min-height:150px"></textarea>
+          </div>
+          <div class="field">
+            <label>Lista de operadores (opcional) — um por linha</label>
+            <textarea class="cell" id="supOps" placeholder="OPERADOR 1&#10;OPERADOR 2" style="min-height:120px"></textarea>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="field">
+            <label>Privacidade</label>
+            <div class="muted">O que você enviar aqui <b>não aparece para outros leitores</b>. Somente quem estiver no link de <b>edição</b> consegue ver e tratar as solicitações.</div>
+          </div>
+
+          <div class="field">
+            <label>Ações</label>
+            <div class="controls" style="justify-content:flex-start">
+              <button class="btn primary" id="supSend">Enviar</button>
+              <button class="btn" id="supClear">Limpar</button>
+            </div>
+            <div class="muted" id="supResult">—</div>
+          </div>
+
+          <div class="field" id="inboxPanel" style="display:none">
+            <div class="row" style="justify-content:space-between">
+              <div>
+                <label style="display:block">Inbox (somente editores)</label>
+                <div class="muted">Filtre e marque como resolvido.</div>
+              </div>
+              <button class="btn" id="inboxRefresh">Recarregar</button>
+            </div>
+            <div class="row">
+              <div class="pill" style="padding:8px 10px">
+                <span>🏢</span>
+                <select id="inboxFilterEmpresa" style="border:0;outline:0;background:transparent;color:var(--text)">
+                  <option value="ALL">Todas</option>
+                  <option value="GBR_CLT">GBR CLT</option>
+                  <option value="GBR_NOVO">GBR NOVO</option>
+                  <option value="3P_CLT">3P CLT</option>
+                  <option value="3PORT">3PORT</option>
+                </select>
+              </div>
+              <div class="pill" style="padding:8px 10px">
+                <span>🧾</span>
+                <select id="inboxFilterStatus" style="border:0;outline:0;background:transparent;color:var(--text)">
+                  <option value="OPEN">Abertos</option>
+                  <option value="ALL">Todos</option>
+                  <option value="DONE">Resolvidos</option>
+                </select>
+              </div>
+            </div>
+            <div id="inboxList" style="display:flex;flex-direction:column;gap:10px;max-height:320px;overflow:auto;padding-right:2px"></div>
+            <div class="muted" style="margin-top:8px">Se a Inbox não carregar, é porque o Apps Script ainda não foi atualizado com o módulo de suporte.</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="muted">Dica: leitores podem enviar pedidos; editores tratam na Inbox.</div>
+        <div class="controls">
+          <button class="btn" id="supportOk">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
     // FIXO: todos carregam do mesmo /exec
     const API_URL = "https://script.google.com/macros/s/AKfycbxyWYuCvc5P-LL3LzKOKiyJ6DeQEijd3R23fyIgQ-Q87wf4sylrF4z5sWhfJ6qYCfKH/exec";
 
-    const COLUMNS = [
+    
+    // Suporte (leitores -> editores)
+    // Token simples para evitar spam externo (altere no Apps Script e aqui se quiser).
+    const SUPPORT_TOKEN = "Planjemaneto_2026_GBR_3P";
+
+    const EMPRESAS = [
+      {id:"GBR_CLT", label:"GBR CLT"},
+      {id:"GBR_NOVO", label:"GBR NOVO"},
+      {id:"3P_CLT", label:"3P CLT"},
+      {id:"3PORT", label:"3PORT"}
+    ];
+
+    function normalizeEmpresa(raw){
+      const e = String(raw||"").trim().toUpperCase();
+      if(e === "GBR") return "GBR_NOVO";
+      if(e === "GBR NOVO") return "GBR_NOVO";
+      if(e === "3P") return "3P_CLT";
+      if(e === "3P CLT") return "3P_CLT";
+      if(e === "3P PORT") return "3PORT";
+      if(e === "3P_PORT") return "3PORT";
+      if(e === "3PORT") return "3PORT";
+      if(e === "GBR_CLT") return "GBR_CLT";
+      if(e === "GBR_NOVO") return "GBR_NOVO";
+      if(e === "3P_CLT") return "3P_CLT";
+      return "";
+    }
+    function empresaLabel(id){
+      const e = normalizeEmpresa(id);
+      return EMPRESAS.find(x=>x.id===e)?.label || (e || "—");
+    }
+const COLUMNS = [
       { id:"standby",  name:"STAND BY" },
       { id:"numeros",  name:"NÚMEROS" },
       { id:"cartao",   name:"CARTÃO" },
@@ -523,7 +722,6 @@
       if(to && dateIso > to) return false;
       return true;
     }
-
     function applyQuickRange(){
       const q = $("#fQuick").value;
       const today = todayISO();
@@ -540,7 +738,6 @@
       renderAgendaProg();
       renderAgendaBms();
     }
-
     const bucketLabel = (id)=> (BUCKETS.find(b=>b.id===id)?.label || id);
 
     let state = { items: [], dispatches: [] };
@@ -682,17 +879,27 @@
       if(q==="BAIXA") return "Qualidade baixa";
       return "Qualidade média";
     }
+    function matchesEmpresa(it){
+      const sel = (document.getElementById('bmEmpresaFilter')?.value || 'ALL');
+      const emp = normalizeEmpresa(it.empresa || '');
+      if(sel === 'ALL') return true;
+      if(sel === 'SEM') return !emp;
+      return emp === sel;
+    }
+
     function matchesSearch(it){
       const s = ($("#search").value||"").trim().toLowerCase();
       if(!s) return true;
-      const hay = [it.bmId, it.notes||"", it.column||"", it.quality||""].join(" ").toLowerCase();
+      const hay = [it.bmId, it.notes||"", it.column||"", it.quality||"", empresaLabel(it.empresa||"")].join(" ").toLowerCase();
       return hay.includes(s);
     }
     function renderBoard(){
       const board=$("#board");
       board.innerHTML="";
+      let totalVisible = 0;
       for(const col of COLUMNS){
-        const items = (state.items||[]).filter(it=>it.column===col.id).filter(matchesSearch);
+        const items = (state.items||[]).filter(it=>it.column===col.id).filter(matchesEmpresa).filter(matchesSearch);
+        totalVisible += items.length;
         const colEl=document.createElement("div");
         colEl.className="col";
         colEl.innerHTML = `
@@ -728,6 +935,7 @@
                 <div class="bm-id">🏷️ ${escapeHtml(it.bmId||"")}</div>
                 <div class="meta">
                   <span class="chip"><strong>📌 ${toBR(it.createdAt||"")}</strong></span>
+                  <span class="chip"><strong>🏢 ${empresaLabel(it.empresa||"")}</strong></span>
                   <span class="chip"><span class="qdot ${qdot(it.quality||"MEDIA")}" style="width:8px;height:8px;border-radius:999px;display:inline-block"></span>
                     <strong>${it.quality==="BAIXA" ? "RISCO" : qualityLabel(it.quality||"MEDIA")}</strong></span>
                 </div>
@@ -749,6 +957,8 @@
         }
         board.appendChild(colEl);
       }
+      const bc = document.getElementById('bmCount');
+      if(bc) bc.textContent = String(totalVisible);
     }
 
     // ---------- BM MODAL ----------
@@ -769,6 +979,7 @@
 
       $("#bmTitle").textContent = isNew ? "Nova BM" : "Editar BM";
       $("#fBmId").value = bm?.bmId || "";
+      $("#fEmpresa").value = bm?.empresa || "";
       $("#fColumn").value = bm?.column || "standby";
       $("#fQuality").value = bm?.quality || "MEDIA";
       $("#fNumbers").value = (bm?.numbers || []).join("\n");
@@ -780,7 +991,7 @@
       $("#fNumbersCount").textContent = `${normalizeNumbers($("#fNumbers").value).length}/10`;
 
       const lock = !canEdit();
-      ["fBmId","fColumn","fQuality","fNumbers","fNotes","fDisparoDate","fDisparoWeekday"].forEach(k=>{
+      ["fBmId","fEmpresa","fColumn","fQuality","fNumbers","fNotes","fDisparoDate","fDisparoWeekday"].forEach(k=>{
         const el = document.getElementById(k);
         if(el) el.disabled = lock;
       });
@@ -801,9 +1012,12 @@
       if(!canEdit()) return;
       const bmId = ($("#fBmId").value||"").trim();
       if(!bmId){ toast("Informe a identificação da BM."); return; }
+      const empresa = normalizeEmpresa($("#fEmpresa").value);
+      if(!empresa){ toast("Selecione a Empresa / Produto."); return; }
 
       const patch = {
         bmId,
+        empresa,
         column: $("#fColumn").value,
         quality: $("#fQuality").value,
         numbers: normalizeNumbers($("#fNumbers").value),
@@ -1124,6 +1338,9 @@
     });
 
     $("#search").addEventListener("input", renderBoard);
+    const empFilter = document.getElementById("bmEmpresaFilter");
+    if(empFilter){ empFilter.addEventListener("change", renderBoard); }
+
     $("#progDate").addEventListener("change", renderProg);
     $("#progBucket").addEventListener("change", renderProg);
     $("#btnAddLine").addEventListener("click", addLine);
