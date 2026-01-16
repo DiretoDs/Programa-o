@@ -227,7 +227,7 @@
   
     /* --- Suporte (leitores -> editores) --- */
     .support-fab{
-      position:fixed;right:16px;bottom:16px;z-index:30;
+      position:fixed;right:16px;bottom:16px;z-index:50;
       width:54px;height:54px;border-radius:18px;
       border:1px solid rgba(255,255,255,.14);
       background: linear-gradient(135deg, rgba(79,156,255,.95), rgba(79,156,255,.25));
@@ -255,11 +255,9 @@
       background: rgba(26,42,73,.55);
       color: var(--muted);
       display:inline-flex;gap:6px;align-items:center;
-      max-width:100%;
     }
     .tag strong{color:var(--text)}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-
   </style>
 </head>
 <body>
@@ -299,7 +297,7 @@
       <!-- BOARD -->
       <div id="viewBoard" style="display:none">
         <div class="panel" style="margin-bottom:12px">
-          <div class="controls" style="justify-content:space-between; align-items:center">
+          <div class="controls" style="justify-content:space-between;align-items:center">
             <div class="controls" style="justify-content:flex-start">
               <div class="pill"><span>🏢 Empresa</span>
                 <select id="bmEmpresaFilter" style="border:0;outline:0;background:transparent;color:var(--text)">
@@ -439,7 +437,7 @@
               <option value="3P_CLT">3P CLT</option>
               <option value="3PORT">3PORT</option>
             </select>
-            <div class="muted">Obrigatório para filtrar o board por empresa.</div>
+            <div class="muted">Usado para filtrar o board por empresa.</div>
           </div>
           <div class="field">
             <label>Status</label>
@@ -580,14 +578,6 @@
             <label>Lista de operadores (opcional) — um por linha</label>
             <textarea class="cell" id="supOps" placeholder="OPERADOR 1&#10;OPERADOR 2" style="min-height:120px"></textarea>
           </div>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div class="field">
-            <label>Privacidade</label>
-            <div class="muted">O que você enviar aqui <b>não aparece para outros leitores</b>. Somente quem estiver no link de <b>edição</b> consegue ver e tratar as solicitações.</div>
-          </div>
-
           <div class="field">
             <label>Ações</label>
             <div class="controls" style="justify-content:flex-start">
@@ -596,37 +586,24 @@
             </div>
             <div class="muted" id="supResult">—</div>
           </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="field">
+            <label>Privacidade</label>
+            <div class="muted">O que você enviar aqui <b>não aparece para outros leitores</b>. Somente quem estiver no link de <b>edição</b> consegue ver e tratar as solicitações (Inbox).</div>
+          </div>
 
           <div class="field" id="inboxPanel" style="display:none">
             <div class="row" style="justify-content:space-between">
               <div>
                 <label style="display:block">Inbox (somente editores)</label>
-                <div class="muted">Filtre e marque como resolvido.</div>
+                <div class="muted">Recarregue para ver as solicitações.</div>
               </div>
               <button class="btn" id="inboxRefresh">Recarregar</button>
             </div>
-            <div class="row">
-              <div class="pill" style="padding:8px 10px">
-                <span>🏢</span>
-                <select id="inboxFilterEmpresa" style="border:0;outline:0;background:transparent;color:var(--text)">
-                  <option value="ALL">Todas</option>
-                  <option value="GBR_CLT">GBR CLT</option>
-                  <option value="GBR_NOVO">GBR NOVO</option>
-                  <option value="3P_CLT">3P CLT</option>
-                  <option value="3PORT">3PORT</option>
-                </select>
-              </div>
-              <div class="pill" style="padding:8px 10px">
-                <span>🧾</span>
-                <select id="inboxFilterStatus" style="border:0;outline:0;background:transparent;color:var(--text)">
-                  <option value="OPEN">Abertos</option>
-                  <option value="ALL">Todos</option>
-                  <option value="DONE">Resolvidos</option>
-                </select>
-              </div>
-            </div>
-            <div id="inboxList" style="display:flex;flex-direction:column;gap:10px;max-height:320px;overflow:auto;padding-right:2px"></div>
-            <div class="muted" style="margin-top:8px">Se a Inbox não carregar, é porque o Apps Script ainda não foi atualizado com o módulo de suporte.</div>
+            <div id="inboxList" style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto;padding-right:2px"></div>
+            <div class="muted" style="margin-top:8px">Se a Inbox não carregar, o Apps Script ainda não foi atualizado com o módulo de suporte.</div>
           </div>
         </div>
       </div>
@@ -645,37 +622,7 @@
     // FIXO: todos carregam do mesmo /exec
     const API_URL = "https://script.google.com/macros/s/AKfycbxyWYuCvc5P-LL3LzKOKiyJ6DeQEijd3R23fyIgQ-Q87wf4sylrF4z5sWhfJ6qYCfKH/exec";
 
-    
-    // Suporte (leitores -> editores)
-    // Token simples para evitar spam externo (altere no Apps Script e aqui se quiser).
-    const SUPPORT_TOKEN = "Planjemaneto_2026_GBR_3P";
-
-    const EMPRESAS = [
-      {id:"GBR_CLT", label:"GBR CLT"},
-      {id:"GBR_NOVO", label:"GBR NOVO"},
-      {id:"3P_CLT", label:"3P CLT"},
-      {id:"3PORT", label:"3PORT"}
-    ];
-
-    function normalizeEmpresa(raw){
-      const e = String(raw||"").trim().toUpperCase();
-      if(e === "GBR") return "GBR_NOVO";
-      if(e === "GBR NOVO") return "GBR_NOVO";
-      if(e === "3P") return "3P_CLT";
-      if(e === "3P CLT") return "3P_CLT";
-      if(e === "3P PORT") return "3PORT";
-      if(e === "3P_PORT") return "3PORT";
-      if(e === "3PORT") return "3PORT";
-      if(e === "GBR_CLT") return "GBR_CLT";
-      if(e === "GBR_NOVO") return "GBR_NOVO";
-      if(e === "3P_CLT") return "3P_CLT";
-      return "";
-    }
-    function empresaLabel(id){
-      const e = normalizeEmpresa(id);
-      return EMPRESAS.find(x=>x.id===e)?.label || (e || "—");
-    }
-const COLUMNS = [
+    const COLUMNS = [
       { id:"standby",  name:"STAND BY" },
       { id:"numeros",  name:"NÚMEROS" },
       { id:"cartao",   name:"CARTÃO" },
@@ -722,6 +669,7 @@ const COLUMNS = [
       if(to && dateIso > to) return false;
       return true;
     }
+
     function applyQuickRange(){
       const q = $("#fQuick").value;
       const today = todayISO();
@@ -738,6 +686,7 @@ const COLUMNS = [
       renderAgendaProg();
       renderAgendaBms();
     }
+
     const bucketLabel = (id)=> (BUCKETS.find(b=>b.id===id)?.label || id);
 
     let state = { items: [], dispatches: [] };
@@ -879,18 +828,10 @@ const COLUMNS = [
       if(q==="BAIXA") return "Qualidade baixa";
       return "Qualidade média";
     }
-    function matchesEmpresa(it){
-      const sel = (document.getElementById('bmEmpresaFilter')?.value || 'ALL');
-      const emp = normalizeEmpresa(it.empresa || '');
-      if(sel === 'ALL') return true;
-      if(sel === 'SEM') return !emp;
-      return emp === sel;
-    }
-
     function matchesSearch(it){
       const s = ($("#search").value||"").trim().toLowerCase();
       if(!s) return true;
-      const hay = [it.bmId, it.notes||"", it.column||"", it.quality||"", empresaLabel(it.empresa||"")].join(" ").toLowerCase();
+      const hay = [it.bmId, it.notes||"", it.column||"", it.quality||""].join(" ").toLowerCase();
       return hay.includes(s);
     }
     function renderBoard(){
@@ -1012,12 +953,9 @@ const COLUMNS = [
       if(!canEdit()) return;
       const bmId = ($("#fBmId").value||"").trim();
       if(!bmId){ toast("Informe a identificação da BM."); return; }
-      const empresa = normalizeEmpresa($("#fEmpresa").value);
-      if(!empresa){ toast("Selecione a Empresa / Produto."); return; }
 
       const patch = {
         bmId,
-        empresa,
         column: $("#fColumn").value,
         quality: $("#fQuality").value,
         numbers: normalizeNumbers($("#fNumbers").value),
@@ -1338,9 +1276,6 @@ const COLUMNS = [
     });
 
     $("#search").addEventListener("input", renderBoard);
-    const empFilter = document.getElementById("bmEmpresaFilter");
-    if(empFilter){ empFilter.addEventListener("change", renderBoard); }
-
     $("#progDate").addEventListener("change", renderProg);
     $("#progBucket").addEventListener("change", renderProg);
     $("#btnAddLine").addEventListener("click", addLine);
@@ -1390,6 +1325,155 @@ const COLUMNS = [
     }
 
     init();
+  
+    // ---------- EMPRESA (BMs) ----------
+    function normalizeEmpresa(raw){
+      const e = String(raw||"").trim().toUpperCase();
+      if(e === "GBR") return "GBR_NOVO";
+      if(e === "GBR NOVO") return "GBR_NOVO";
+      if(e === "3P") return "3P_CLT";
+      if(e === "3P CLT") return "3P_CLT";
+      if(e === "3P PORT") return "3PORT";
+      if(e === "3P_PORT") return "3PORT";
+      if(e === "3PORT") return "3PORT";
+      if(e === "GBR_CLT") return "GBR_CLT";
+      if(e === "GBR_NOVO") return "GBR_NOVO";
+      if(e === "3P_CLT") return "3P_CLT";
+      return "";
+    }
+    function empresaLabel(id){
+      const e = normalizeEmpresa(id);
+      if(e === "GBR_CLT") return "GBR CLT";
+      if(e === "GBR_NOVO") return "GBR NOVO";
+      if(e === "3P_CLT") return "3P CLT";
+      if(e === "3PORT") return "3PORT";
+      return e || "—";
+    }
+    function matchesEmpresa(it){
+      const sel = (document.getElementById("bmEmpresaFilter")?.value || "ALL");
+      const emp = normalizeEmpresa(it.empresa || "");
+      if(sel === "ALL") return true;
+      if(sel === "SEM") return !emp;
+      return emp === sel;
+    }
+
+    // ---------- SUPORTE ----------
+    const SUPPORT_TOKEN = "Planjemaneto_2026_GBR_3P"; // precisa bater com Apps Script
+    (function(){
+      const fab = document.getElementById("supportFab");
+      const back = document.getElementById("supportBackdrop");
+      if(!fab || !back) return;
+
+      const open = ()=>{ back.classList.add("open"); maybeShowInbox(); };
+      const close = ()=> back.classList.remove("open");
+
+      document.getElementById("supportClose")?.addEventListener("click", close);
+      document.getElementById("supportOk")?.addEventListener("click", close);
+      fab.addEventListener("click", open);
+
+      // limpar
+      document.getElementById("supClear")?.addEventListener("click", ()=>{
+        document.getElementById("supMsg").value = "";
+        document.getElementById("supOps").value = "";
+        document.getElementById("supResult").textContent = "—";
+      });
+
+      async function postNoCors(url, payload){
+        try{
+          await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify(payload||{}) });
+          return { ok:true };
+        }catch(e){
+          return { ok:false, error:String(e) };
+        }
+      }
+      async function getJson(url){
+        const r = await fetch(url, { cache:"no-store" });
+        return await r.json();
+      }
+
+      // enviar
+      document.getElementById("supSend")?.addEventListener("click", async ()=>{
+        const sender = (document.getElementById("supSender").value||"").trim();
+        const empresa = normalizeEmpresa(document.getElementById("supEmpresa").value||"");
+        const tipo = (document.getElementById("supTipo").value||"PEDIDO").trim();
+        const msg = (document.getElementById("supMsg").value||"").trim();
+        const ops = (document.getElementById("supOps").value||"").trim();
+        const resEl = document.getElementById("supResult");
+
+        if(!sender){ toast("Informe seu nome/cargo."); return; }
+        if(!msg){ toast("Escreva a mensagem."); return; }
+
+        resEl.textContent = "Enviando…";
+        const url = API_URL + (API_URL.includes("?")?"&":"?") + "action=inbox_add&token=" + encodeURIComponent(SUPPORT_TOKEN);
+        const payload = { sender, empresa, tipo, msg, ops, createdAt: nowISO() };
+        const r = await postNoCors(url, payload);
+        if(r.ok){
+          resEl.textContent = "✅ Enviado. Um editor vai ver na Inbox.";
+          toast("Enviado.");
+          document.getElementById("supMsg").value = "";
+          document.getElementById("supOps").value = "";
+          if(typeof canEdit === "function" && canEdit()) await loadInbox();
+        }else{
+          resEl.textContent = "❌ Não consegui enviar (Apps Script pode não estar atualizado).";
+          toast("Falha ao enviar.");
+        }
+      });
+
+      async function loadInbox(){
+        const list = document.getElementById("inboxList");
+        if(!list) return;
+        list.innerHTML = `<div class="muted">Carregando…</div>`;
+        try{
+          const url = API_URL + (API_URL.includes("?")?"&":"?") + "action=inbox_list&key=" + encodeURIComponent(settings?.key||"");
+          const data = await getJson(url);
+          if(!data || data.ok === false){
+            list.innerHTML = `<div class="muted">Inbox não disponível.</div>`;
+            return;
+          }
+          const inbox = Array.isArray(data.inbox) ? data.inbox : [];
+          if(inbox.length === 0){
+            list.innerHTML = `<div class="muted">Sem solicitações.</div>`;
+            return;
+          }
+          list.innerHTML = inbox.map(it=>{
+            const st = String(it.status||"OPEN").toUpperCase();
+            const stLabel = (st==="DONE") ? "Resolvido" : "Aberto";
+            const ops = (it.ops||"").trim();
+            return `
+              <div class="inbox-item">
+                <div class="inbox-top">
+                  <div>
+                    <b>${escapeHtml(it.sender||"")}</b>
+                    <div class="muted">${escapeHtml(it.createdAt||"")}</div>
+                  </div>
+                  <span class="tag"><strong>${escapeHtml(stLabel)}</strong></span>
+                </div>
+                <div class="inbox-meta">
+                  <span class="tag"><strong>🏢</strong> ${escapeHtml(empresaLabel(it.empresa||""))}</span>
+                  <span class="tag"><strong>🧾</strong> ${escapeHtml(it.tipo||"")}</span>
+                </div>
+                <div>${escapeHtml(it.msg||"")}</div>
+                ${ops ? `<div class="tag" style="white-space:pre-wrap"><strong>Operadores:</strong><br>${escapeHtml(ops)}</div>` : ``}
+              </div>
+            `;
+          }).join("");
+        }catch(e){
+          list.innerHTML = `<div class="muted">Inbox não carregou (Apps Script precisa do módulo de suporte).</div>`;
+        }
+      }
+
+      function maybeShowInbox(){
+        const panel = document.getElementById("inboxPanel");
+        if(!panel) return;
+        const editor = (typeof canEdit === "function" && canEdit());
+        panel.style.display = editor ? "block" : "none";
+        if(editor) loadInbox();
+      }
+
+      document.getElementById("inboxRefresh")?.addEventListener("click", loadInbox);
+    })();
+
+
   </script>
 </body>
 </html>
