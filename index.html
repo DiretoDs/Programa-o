@@ -259,15 +259,10 @@
     }
     .tag strong{color:var(--text)}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-
+  
     /* Fix dropdown (select/options) em tema escuro */
-    select{
-      background-color: rgba(255,255,255,.04);
-    }
-    option{
-      background-color: #0b1220;
-      color: #e7eefc;
-    }
+    select{ background-color: rgba(255,255,255,.04); color: var(--text); }
+    select option{ background-color: #0b1220; color: #e7eefc; }
 
   </style>
 </head>
@@ -287,8 +282,8 @@
           <button class="tab" id="tabBoard">BMs</button>
           <button class="tab active" id="tabAgenda">Agenda</button>
           <button class="tab" id="tabProg">Programação</button>
-                  <button class="tab" id="tabSupport">Suportes</button>
-</div>
+          <button class="tab" id="tabSupport">Suportes</button>
+        </div>
 
         <div class="pill" title="Status">
           <span class="dot" id="modeDot"></span>
@@ -425,6 +420,52 @@
         </div>
       </div>
     </div>
+
+
+    <div id="viewSupport" style="display:none">
+      <div class="panel">
+        <div class="controls" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div>
+            <h3 style="margin:0">Suportes (Inbox)</h3>
+            <div class="muted">Solicitações enviadas pelos leitores via 💬. Somente editores conseguem visualizar.</div>
+          </div>
+          <div class="controls">
+            <button class="btn" id="supportRefresh">Recarregar</button>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="controls" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+          <div class="pill"><span>🏢</span>
+            <select id="supportEmpresa" style="border:0;outline:0;background:transparent;color:var(--text)">
+              <option value="ALL">Todas</option>
+              <option value="GBR_CLT">GBR CLT</option>
+              <option value="GBR_NOVO">GBR NOVO</option>
+              <option value="3P_CLT">3P CLT</option>
+              <option value="3PORT">3PORT</option>
+            </select>
+          </div>
+
+          <div class="pill"><span>✅</span>
+            <select id="supportStatus" style="border:0;outline:0;background:transparent;color:var(--text)">
+              <option value="OPEN">Abertos</option>
+              <option value="ALL">Todos</option>
+              <option value="DONE">Resolvidos</option>
+            </select>
+          </div>
+
+          <span class="chip"><strong id="supportCount">0</strong> itens</span>
+          <span class="muted">Clique em “Marcar resolvido” para encerrar.</span>
+        </div>
+
+        <div class="hr"></div>
+
+        <div id="supportList" style="display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow:auto;padding-right:2px"></div>
+        <div class="muted" style="margin-top:10px">Se não aparecer nada, verifique se o Apps Script está com <code>action=inbox_list</code> e se você abriu o site com <code>#edit=1&key=...</code>.</div>
+      </div>
+    </div>
+
   </div>
 
   <!-- BM Modal -->
@@ -606,7 +647,17 @@
             <div class="muted">O que você enviar aqui <b>não aparece para outros leitores</b>. Somente quem estiver no link de <b>edição</b> consegue ver e tratar as solicitações (Inbox).</div>
           </div>
 
-          <div class="field" id="inboxPanel" style="display:none"></div>
+          <div class="field" id="inboxPanel" style="display:none">
+            <div class="row" style="justify-content:space-between">
+              <div>
+                <label style="display:block">Inbox (somente editores)</label>
+                <div class="muted">Recarregue para ver as solicitações.</div>
+              </div>
+              <button class="btn" id="inboxRefresh">Recarregar</button>
+            </div>
+            <div id="inboxList" style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto;padding-right:2px"></div>
+            <div class="muted" style="margin-top:8px">Se a Inbox não carregar, o Apps Script ainda não foi atualizado com o módulo de suporte.</div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -782,7 +833,8 @@
       $("#tabSupport").style.display = canEdit() ? "inline-flex" : "none";
       if(!canEdit()){
         $("#viewProg").style.display = "none";
-        if($("#tabProg").classList.contains("active")){ setTab("agenda"); }
+        $("#viewSupport").style.display = "none";
+        if($("#tabProg").classList.contains("active") || $("#tabSupport").classList.contains("active")){ setTab("agenda"); }
       }
 
     }
@@ -1245,15 +1297,20 @@
 
     // ---------- Tabs ----------
     function setTab(which){
-      const isBoard=which==="board", isAgenda=which==="agenda", isProg=which==="prog";
+      const isBoard=which==="board", isAgenda=which==="agenda", isProg=which==="prog", isSupport=which==="support";
       $("#tabBoard").classList.toggle("active", isBoard);
       $("#tabAgenda").classList.toggle("active", isAgenda);
       $("#tabProg").classList.toggle("active", isProg);
+      $("#tabSupport").classList.toggle("active", isSupport);
+
       $("#viewBoard").style.display = isBoard ? "block" : "none";
       $("#viewAgenda").style.display = isAgenda ? "block" : "none";
-      $("#viewProg").style.display = isProg ? "block" : "none";
+      $("#viewProg").style.display = (isProg && canEdit()) ? "block" : "none";
+      $("#viewSupport").style.display = (isSupport && canEdit()) ? "block" : "none";
+
       if(isAgenda){ renderAgendaProg(); renderAgendaBms(); }
       if(isProg){ renderProg(); }
+      if(isSupport){ renderSupportTab(); }
       if(isBoard){ renderBoard(); }
     }
 
@@ -1261,6 +1318,12 @@
     $("#tabAgenda").addEventListener("click", ()=>setTab("agenda"));
     $("#tabProg").addEventListener("click", ()=>setTab("prog"));
     $("#tabSupport").addEventListener("click", ()=>setTab("support"));
+    const sRef = document.getElementById("supportRefresh");
+    if(sRef) sRef.addEventListener("click", renderSupportTab);
+    const sEmp = document.getElementById("supportEmpresa");
+    if(sEmp) sEmp.addEventListener("change", renderSupportTab);
+    const sSt = document.getElementById("supportStatus");
+    if(sSt) sSt.addEventListener("change", renderSupportTab);
 
     $("#btnAdd").addEventListener("click", ()=>openBm(null));
     $("#btnRefresh").addEventListener("click", async ()=>{
@@ -1368,7 +1431,7 @@
       const back = document.getElementById("supportBackdrop");
       if(!fab || !back) return;
 
-      const open = ()=>{ back.classList.add("open"); };
+      const open = ()=>{ back.classList.add("open"); maybeShowInbox(); };
       const close = ()=> back.classList.remove("open");
 
       document.getElementById("supportClose")?.addEventListener("click", close);
@@ -1464,6 +1527,14 @@
         }catch(e){
           list.innerHTML = `<div class="muted">Inbox não carregou (Apps Script precisa do módulo de suporte).</div>`;
         }
+      }
+
+      function maybeShowInbox(){
+        const panel = document.getElementById("inboxPanel");
+        if(!panel) return;
+        const editor = (typeof canEdit === "function" && canEdit());
+        panel.style.display = editor ? "block" : "none";
+        if(editor) loadInbox();
       }
 
       document.getElementById("inboxRefresh")?.addEventListener("click", loadInbox);
