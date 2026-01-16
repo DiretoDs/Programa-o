@@ -6,7 +6,6 @@
   <title>Organizador Online — BMs + Programação</title>
   <style>
     :root{
-      color-scheme: dark;
       --bg:#0b1220;
       --text:#e7eefc;
       --muted:#a9b6d3;
@@ -226,7 +225,16 @@
     .field{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.03)}
     .field label{font-size:12px;color:var(--muted)}
   
-    /* --- Suporte (leitores -> editores) --- */
+    /* Admin-only tabs hidden by default (mostra via JS quando editor) */
+    .tab.admin{ display:none; }
+
+    /* Fix dropdown (select/options) em tema escuro */
+    :root{ color-scheme: dark; }
+    select{ background-color: rgba(255,255,255,.04); color: var(--text); }
+    select option{ background-color: #0b1220; color: #e7eefc; }
+
+  
+    /* --- Suporte --- */
     .support-fab{
       position:fixed;right:16px;bottom:16px;z-index:50;
       width:54px;height:54px;border-radius:18px;
@@ -258,11 +266,6 @@
       display:inline-flex;gap:6px;align-items:center;
     }
     .tag strong{color:var(--text)}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  
-    /* Fix dropdown (select/options) em tema escuro */
-    select{ background-color: rgba(255,255,255,.04); color: var(--text); }
-    select option{ background-color: #0b1220; color: #e7eefc; }
 
   </style>
 </head>
@@ -281,8 +284,8 @@
         <div class="tabs">
           <button class="tab" id="tabBoard">BMs</button>
           <button class="tab active" id="tabAgenda">Agenda</button>
-          <button class="tab" id="tabProg">Programação</button>
-          <button class="tab" id="tabSupport">Suportes</button>
+          <button class="tab admin" id="tabProg">Programação</button>
+          <button class="tab admin" id="tabSupport">Suportes</button>
         </div>
 
         <div class="pill" title="Status">
@@ -420,52 +423,6 @@
         </div>
       </div>
     </div>
-
-
-    <div id="viewSupport" style="display:none">
-      <div class="panel">
-        <div class="controls" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-          <div>
-            <h3 style="margin:0">Suportes (Inbox)</h3>
-            <div class="muted">Solicitações enviadas pelos leitores via 💬. Somente editores conseguem visualizar.</div>
-          </div>
-          <div class="controls">
-            <button class="btn" id="supportRefresh">Recarregar</button>
-          </div>
-        </div>
-
-        <div class="hr"></div>
-
-        <div class="controls" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
-          <div class="pill"><span>🏢</span>
-            <select id="supportEmpresa" style="border:0;outline:0;background:transparent;color:var(--text)">
-              <option value="ALL">Todas</option>
-              <option value="GBR_CLT">GBR CLT</option>
-              <option value="GBR_NOVO">GBR NOVO</option>
-              <option value="3P_CLT">3P CLT</option>
-              <option value="3PORT">3PORT</option>
-            </select>
-          </div>
-
-          <div class="pill"><span>✅</span>
-            <select id="supportStatus" style="border:0;outline:0;background:transparent;color:var(--text)">
-              <option value="OPEN">Abertos</option>
-              <option value="ALL">Todos</option>
-              <option value="DONE">Resolvidos</option>
-            </select>
-          </div>
-
-          <span class="chip"><strong id="supportCount">0</strong> itens</span>
-          <span class="muted">Clique em “Marcar resolvido” para encerrar.</span>
-        </div>
-
-        <div class="hr"></div>
-
-        <div id="supportList" style="display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow:auto;padding-right:2px"></div>
-        <div class="muted" style="margin-top:10px">Se não aparecer nada, verifique se o Apps Script está com <code>action=inbox_list</code> e se você abriu o site com <code>#edit=1&key=...</code>.</div>
-      </div>
-    </div>
-
   </div>
 
   <!-- BM Modal -->
@@ -490,7 +447,6 @@
               <option value="3P_CLT">3P CLT</option>
               <option value="3PORT">3PORT</option>
             </select>
-            <div class="muted">Usado para filtrar o board por empresa.</div>
           </div>
           <div class="field">
             <label>Status</label>
@@ -589,79 +545,53 @@
   </div>
 
   
-  <!-- Suporte (leitores -> editores) -->
-  <div class="support-fab" id="supportFab" title="Suporte / Sugestões">
-    <span>💬</span>
-  </div>
+  <!-- Suporte (leitores enviam; editores tratam na aba Suportes) -->
+  <div class="support-fab" id="supportFab" title="Suporte / Sugestões"><span>💬</span></div>
 
   <div class="backdrop" id="supportBackdrop">
-    <div class="modal" style="width:min(980px,100%)">
+    <div class="modal" style="width:min(860px,100%)">
       <div class="modal-header">
         <b>Suporte / Sugestões</b>
         <button class="btn" id="supportClose">✕</button>
       </div>
-      <div class="modal-body" style="grid-template-columns:1fr 1fr">
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div class="field">
-            <label>Seu nome / cargo (ex: Supervisor X)</label>
-            <input class="cell" id="supSender" placeholder="Ex: Supervisor X" />
-          </div>
-          <div class="field">
-            <label>Empresa / Produto</label>
-            <select class="cell" id="supEmpresa">
-              <option value="GBR_CLT">GBR CLT</option>
-              <option value="GBR_NOVO">GBR NOVO</option>
-              <option value="3P_CLT">3P CLT</option>
-              <option value="3PORT">3PORT</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Tipo</label>
-            <select class="cell" id="supTipo">
-              <option value="PEDIDO">Pedido</option>
-              <option value="SUGESTAO">Sugestão</option>
-              <option value="ALERTA">Alerta</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Mensagem</label>
-            <textarea class="cell" id="supMsg" placeholder="Descreva o que precisa / sugestão..." style="min-height:150px"></textarea>
-          </div>
-          <div class="field">
-            <label>Lista de operadores (opcional) — um por linha</label>
-            <textarea class="cell" id="supOps" placeholder="OPERADOR 1&#10;OPERADOR 2" style="min-height:120px"></textarea>
-          </div>
-          <div class="field">
-            <label>Ações</label>
-            <div class="controls" style="justify-content:flex-start">
-              <button class="btn primary" id="supSend">Enviar</button>
-              <button class="btn" id="supClear">Limpar</button>
-            </div>
-            <div class="muted" id="supResult">—</div>
-          </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Seu nome / cargo (ex: Supervisor X)</label>
+          <input class="cell" id="supSender" placeholder="Ex: Supervisor X" />
         </div>
-
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div class="field">
-            <label>Privacidade</label>
-            <div class="muted">O que você enviar aqui <b>não aparece para outros leitores</b>. Somente quem estiver no link de <b>edição</b> consegue ver e tratar as solicitações (Inbox).</div>
-          </div>
-
-          <div class="field" id="inboxPanel" style="display:none">
-            <div class="row" style="justify-content:space-between">
-              <div>
-                <label style="display:block">Inbox (somente editores)</label>
-                <div class="muted">Recarregue para ver as solicitações.</div>
-              </div>
-              <button class="btn" id="inboxRefresh">Recarregar</button>
-            </div>
-            <div id="inboxList" style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto;padding-right:2px"></div>
-            <div class="muted" style="margin-top:8px">Se a Inbox não carregar, o Apps Script ainda não foi atualizado com o módulo de suporte.</div>
-          </div>
+        <div class="field">
+          <label>Empresa / Produto</label>
+          <select class="cell" id="supEmpresa">
+            <option value="GBR_CLT">GBR CLT</option>
+            <option value="GBR_NOVO">GBR NOVO</option>
+            <option value="3P_CLT">3P CLT</option>
+            <option value="3PORT">3PORT</option>
+          </select>
         </div>
+        <div class="field">
+          <label>Tipo</label>
+          <select class="cell" id="supTipo">
+            <option value="PEDIDO">Pedido</option>
+            <option value="SUGESTAO">Sugestão</option>
+            <option value="ALERTA">Alerta</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Mensagem</label>
+          <textarea class="cell" id="supMsg" placeholder="Descreva o que precisa..." style="min-height:140px"></textarea>
+        </div>
+        <div class="field">
+          <label>Lista de operadores (opcional) — um por linha</label>
+          <textarea class="cell" id="supOps" placeholder="OPERADOR 1&#10;OPERADOR 2" style="min-height:120px"></textarea>
+        </div>
+        <div class="controls" style="justify-content:flex-start">
+          <button class="btn primary" id="supSend">Enviar</button>
+          <button class="btn" id="supClear">Limpar</button>
+          <span class="muted" id="supResult">—</span>
+        </div>
+        <div class="muted">O que você enviar aqui <b>não aparece para outros leitores</b>. Só editores veem na aba <b>Suportes</b>.</div>
       </div>
       <div class="modal-footer">
-        <div class="muted">Dica: leitores podem enviar pedidos; editores tratam na Inbox.</div>
         <div class="controls">
           <button class="btn" id="supportOk">Fechar</button>
         </div>
@@ -766,9 +696,19 @@
     function canEdit(){ return settings.edit && !!settings.key; }
 
     function signatureOf(st){
+      const items = (st.items||[]).slice().sort((a,b)=>String(a.id||"").localeCompare(String(b.id||"")));
+      const dispatches = (st.dispatches||[]).slice().sort((a,b)=>String(a.id||"").localeCompare(String(b.id||"")));
       const str = JSON.stringify({
-        items:(st.items||[]).map(i=>[i.id,i.bmId,i.column,i.quality,i.createdAt,i.updatedAt,i.disparoDate||"",i.disparoWeekday||"", (i.numbers||[]).join(","), (i.notes||"")]),
-        dispatches:(st.dispatches||[]).map(d=>[d.id,d.date,d.bucket,d.operator,d.code,d.qty,d.time])
+        items: items.map(i=>[
+          i.id||"", i.bmId||"", i.empresa||"",
+          i.column||"", i.quality||"", i.createdAt||"",
+          i.disparoDate||"", i.disparoWeekday||"",
+          (i.numbers||[]).join(","), (i.notes||"")
+        ]),
+        dispatches: dispatches.map(d=>[
+          d.id||"", d.date||"", d.bucket||"", d.operator||"",
+          d.code||"", Number(d.qty||0), d.time||""
+        ])
       });
       let h=0; for(let k=0;k<str.length;k++) h=(h*31+str.charCodeAt(k))>>>0;
       return String(h);
@@ -1008,9 +948,12 @@
       if(!canEdit()) return;
       const bmId = ($("#fBmId").value||"").trim();
       if(!bmId){ toast("Informe a identificação da BM."); return; }
+      const empresa = normalizeEmpresa($("#fEmpresa").value);
+      if(!empresa){ toast("Selecione a Empresa / Produto."); return; }
 
       const patch = {
         bmId,
+        empresa,
         column: $("#fColumn").value,
         quality: $("#fQuality").value,
         numbers: normalizeNumbers($("#fNumbers").value),
@@ -1317,13 +1260,13 @@
     $("#tabBoard").addEventListener("click", ()=>setTab("board"));
     $("#tabAgenda").addEventListener("click", ()=>setTab("agenda"));
     $("#tabProg").addEventListener("click", ()=>setTab("prog"));
-    $("#tabSupport").addEventListener("click", ()=>setTab("support"));
-    const sRef = document.getElementById("supportRefresh");
-    if(sRef) sRef.addEventListener("click", renderSupportTab);
-    const sEmp = document.getElementById("supportEmpresa");
-    if(sEmp) sEmp.addEventListener("change", renderSupportTab);
-    const sSt = document.getElementById("supportStatus");
-    if(sSt) sSt.addEventListener("change", renderSupportTab);
+      $("#tabSupport").addEventListener("click", ()=>setTab("support"));
+      const sRef = document.getElementById("supportRefresh");
+      if(sRef) sRef.addEventListener("click", renderSupportTab);
+      const sEmp = document.getElementById("supportEmpresa");
+      if(sEmp) sEmp.addEventListener("change", renderSupportTab);
+      const sSt = document.getElementById("supportStatus");
+      if(sSt) sSt.addEventListener("change", renderSupportTab);
 
     $("#btnAdd").addEventListener("click", ()=>openBm(null));
     $("#btnRefresh").addEventListener("click", async ()=>{
@@ -1343,6 +1286,8 @@
     });
 
     $("#search").addEventListener("input", renderBoard);
+      const empFilter = document.getElementById("bmEmpresaFilter");
+      if(empFilter) empFilter.addEventListener("change", renderBoard);
     $("#progDate").addEventListener("change", renderProg);
     $("#progBucket").addEventListener("change", renderProg);
     $("#btnAddLine").addEventListener("click", addLine);
@@ -1391,8 +1336,7 @@
       }
     }
 
-    init();
-  
+
     // ---------- EMPRESA (BMs) ----------
     function normalizeEmpresa(raw){
       const e = String(raw||"").trim().toUpperCase();
@@ -1424,41 +1368,28 @@
       return emp === sel;
     }
 
+
     // ---------- SUPORTE ----------
-    const SUPPORT_TOKEN = "Planjemaneto_2026_GBR_3P"; // precisa bater com Apps Script
+    const SUPPORT_TOKEN = "Planjemaneto_2026_GBR_3P";
+
     (function(){
       const fab = document.getElementById("supportFab");
       const back = document.getElementById("supportBackdrop");
       if(!fab || !back) return;
 
-      const open = ()=>{ back.classList.add("open"); maybeShowInbox(); };
+      const open = ()=> back.classList.add("open");
       const close = ()=> back.classList.remove("open");
 
       document.getElementById("supportClose")?.addEventListener("click", close);
       document.getElementById("supportOk")?.addEventListener("click", close);
       fab.addEventListener("click", open);
 
-      // limpar
       document.getElementById("supClear")?.addEventListener("click", ()=>{
         document.getElementById("supMsg").value = "";
         document.getElementById("supOps").value = "";
         document.getElementById("supResult").textContent = "—";
       });
 
-      async function postNoCors(url, payload){
-        try{
-          await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify(payload||{}) });
-          return { ok:true };
-        }catch(e){
-          return { ok:false, error:String(e) };
-        }
-      }
-      async function getJson(url){
-        const r = await fetch(url, { cache:"no-store" });
-        return await r.json();
-      }
-
-      // enviar
       document.getElementById("supSend")?.addEventListener("click", async ()=>{
         const sender = (document.getElementById("supSender").value||"").trim();
         const empresa = normalizeEmpresa(document.getElementById("supEmpresa").value||"");
@@ -1466,81 +1397,108 @@
         const msg = (document.getElementById("supMsg").value||"").trim();
         const ops = (document.getElementById("supOps").value||"").trim();
         const resEl = document.getElementById("supResult");
-
         if(!sender){ toast("Informe seu nome/cargo."); return; }
         if(!msg){ toast("Escreva a mensagem."); return; }
 
         resEl.textContent = "Enviando…";
         const url = API_URL + (API_URL.includes("?")?"&":"?") + "action=inbox_add&token=" + encodeURIComponent(SUPPORT_TOKEN);
         const payload = { sender, empresa, tipo, msg, ops, createdAt: nowISO() };
-        const r = await postNoCors(url, payload);
-        if(r.ok){
-          resEl.textContent = "✅ Enviado. Um editor vai ver na Inbox.";
+        try{
+          await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+          resEl.textContent = "✅ Enviado. Um editor vai ver na aba Suportes.";
           toast("Enviado.");
           document.getElementById("supMsg").value = "";
           document.getElementById("supOps").value = "";
-          if(typeof canEdit === "function" && canEdit()) await loadInbox();
-        }else{
-          resEl.textContent = "❌ Não consegui enviar (Apps Script pode não estar atualizado).";
+        }catch(e){
+          resEl.textContent = "❌ Falha ao enviar.";
           toast("Falha ao enviar.");
         }
       });
-
-      async function loadInbox(){
-        const list = document.getElementById("inboxList");
-        if(!list) return;
-        list.innerHTML = `<div class="muted">Carregando…</div>`;
-        try{
-          const url = API_URL + (API_URL.includes("?")?"&":"?") + "action=inbox_list&key=" + encodeURIComponent(settings?.key||"");
-          const data = await getJson(url);
-          if(!data || data.ok === false){
-            list.innerHTML = `<div class="muted">Inbox não disponível.</div>`;
-            return;
-          }
-          const inbox = Array.isArray(data.inbox) ? data.inbox : [];
-          if(inbox.length === 0){
-            list.innerHTML = `<div class="muted">Sem solicitações.</div>`;
-            return;
-          }
-          list.innerHTML = inbox.map(it=>{
-            const st = String(it.status||"OPEN").toUpperCase();
-            const stLabel = (st==="DONE") ? "Resolvido" : "Aberto";
-            const ops = (it.ops||"").trim();
-            return `
-              <div class="inbox-item">
-                <div class="inbox-top">
-                  <div>
-                    <b>${escapeHtml(it.sender||"")}</b>
-                    <div class="muted">${escapeHtml(it.createdAt||"")}</div>
-                  </div>
-                  <span class="tag"><strong>${escapeHtml(stLabel)}</strong></span>
-                </div>
-                <div class="inbox-meta">
-                  <span class="tag"><strong>🏢</strong> ${escapeHtml(empresaLabel(it.empresa||""))}</span>
-                  <span class="tag"><strong>🧾</strong> ${escapeHtml(it.tipo||"")}</span>
-                </div>
-                <div>${escapeHtml(it.msg||"")}</div>
-                ${ops ? `<div class="tag" style="white-space:pre-wrap"><strong>Operadores:</strong><br>${escapeHtml(ops)}</div>` : ``}
-              </div>
-            `;
-          }).join("");
-        }catch(e){
-          list.innerHTML = `<div class="muted">Inbox não carregou (Apps Script precisa do módulo de suporte).</div>`;
-        }
-      }
-
-      function maybeShowInbox(){
-        const panel = document.getElementById("inboxPanel");
-        if(!panel) return;
-        const editor = (typeof canEdit === "function" && canEdit());
-        panel.style.display = editor ? "block" : "none";
-        if(editor) loadInbox();
-      }
-
-      document.getElementById("inboxRefresh")?.addEventListener("click", loadInbox);
     })();
 
+    // ---------- SUPORTE (ABA - editores) ----------
+    async function supportFetchInbox(){
+      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_list&key=" + encodeURIComponent(settings.key||"");
+      const r = await fetch(url, { cache:"no-store" });
+      return await r.json();
+    }
+    async function supportUpdateStatus(id, status){
+      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_update&key=" + encodeURIComponent(settings.key||"");
+      await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify({ id, status, updatedAt: nowISO() }) });
+    }
+    async function renderSupportTab(){
+      if(!canEdit()) return;
+      const listEl = document.getElementById("supportList");
+      const countEl = document.getElementById("supportCount");
+      if(!listEl) return;
+      listEl.innerHTML = `<div class="muted">Carregando…</div>`;
+      try{
+        const data = await supportFetchInbox();
+        if(!data || data.ok === false){
+          listEl.innerHTML = `<div class="muted">Inbox não disponível.</div>`;
+          if(countEl) countEl.textContent = "0";
+          return;
+        }
+        const inbox = Array.isArray(data.inbox) ? data.inbox : [];
+        const empSel = (document.getElementById("supportEmpresa")?.value || "ALL");
+        const stSel = (document.getElementById("supportStatus")?.value || "OPEN");
+        const filtered = inbox.filter(it=>{
+          const emp = normalizeEmpresa(it.empresa||"");
+          const st = String(it.status||"OPEN").toUpperCase();
+          if(empSel !== "ALL" && emp !== empSel) return false;
+          if(stSel !== "ALL" && st !== stSel) return false;
+          return true;
+        });
+        if(countEl) countEl.textContent = String(filtered.length);
+        if(filtered.length === 0){
+          listEl.innerHTML = `<div class="muted">Sem solicitações no filtro.</div>`;
+          return;
+        }
+        listEl.innerHTML = filtered.map(it=>{
+          const st = String(it.status||"OPEN").toUpperCase();
+          const stLabel = (st==="DONE") ? "Resolvido" : "Aberto";
+          const ops = (it.ops||"").trim();
+          const btnLabel = (st==="DONE") ? "Reabrir" : "Marcar resolvido";
+          const btnClass = (st==="DONE") ? "btn" : "btn primary";
+          return `
+            <div class="inbox-item">
+              <div class="inbox-top">
+                <div>
+                  <b>${escapeHtml(it.sender||"")}</b>
+                  <div class="muted">${escapeHtml(it.createdAt||"")}</div>
+                </div>
+                <span class="tag"><strong>${escapeHtml(stLabel)}</strong></span>
+              </div>
+              <div class="inbox-meta">
+                <span class="tag"><strong>🏢</strong> ${escapeHtml(empresaLabel(it.empresa||""))}</span>
+                <span class="tag"><strong>🧾</strong> ${escapeHtml(it.tipo||"")}</span>
+              </div>
+              <div>${escapeHtml(it.msg||"")}</div>
+              ${ops ? `<div class="tag" style="white-space:pre-wrap"><strong>Operadores:</strong><br>${escapeHtml(ops)}</div>` : ``}
+              <div class="row">
+                <button class="${btnClass}" data-support-id="${escapeHtml(it.id||"")}" data-support-st="${st}">${btnLabel}</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+        listEl.querySelectorAll("[data-support-id]").forEach(btn=>{
+          btn.addEventListener("click", async ()=>{
+            const id = btn.getAttribute("data-support-id");
+            const st = btn.getAttribute("data-support-st");
+            const next = (String(st).toUpperCase()==="DONE") ? "OPEN" : "DONE";
+            await supportUpdateStatus(id, next);
+            toast("Atualizado.");
+            renderSupportTab();
+          });
+        });
+      }catch(e){
+        listEl.innerHTML = `<div class="muted">Inbox não carregou.</div>`;
+        if(countEl) countEl.textContent = "0";
+      }
+    }
 
+
+    init();
   </script>
 </body>
 </html>
