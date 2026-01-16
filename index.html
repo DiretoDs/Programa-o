@@ -426,6 +426,7 @@
   </div>
 
 
+    <!-- SUPORTES (somente editores) -->
     <div id="viewSupport" style="display:none">
       <div class="panel">
         <div class="controls" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -466,7 +467,7 @@
         <div class="hr"></div>
 
         <div id="supportList" style="display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow:auto;padding-right:2px"></div>
-        <div class="muted" style="margin-top:10px">Se não aparecer nada: confirme o envio do leitor (balão 💬) e que você abriu como editor com <code>#edit=1&key=...</code>.</div>
+        <div class="muted" style="margin-top:10px">Dica: teste direto no navegador: <code>?action=inbox_list&key=...</code> e confira se há itens. Se o total for &gt; 0 e aqui não aparecer, é cache do GitHub.</div>
       </div>
     </div>
 
@@ -1285,7 +1286,6 @@
 
     // ---------- Tabs ----------
     function setTab(which){
-      currentTab = which;
       const isBoard=which==="board", isAgenda=which==="agenda", isProg=which==="prog", isSupport=which==="support";
       $("#tabBoard").classList.toggle("active", isBoard);
       $("#tabAgenda").classList.toggle("active", isAgenda);
@@ -1297,22 +1297,16 @@
       $("#viewProg").style.display = (isProg && canEdit()) ? "block" : "none";
       $("#viewSupport").style.display = (isSupport && canEdit()) ? "block" : "none";
 
-      if(isBoard) renderBoard();
       if(isAgenda){ renderAgendaProg(); renderAgendaBms(); }
-      if(isProg) renderProg();
-      if(isSupport) renderSupportTab();
+      if(isProg){ renderProg(); }
+      if(isSupport){ renderSupportTab(); }
+      if(isBoard){ renderBoard(); }
     }
 
     $("#tabBoard").addEventListener("click", ()=>setTab("board"));
     $("#tabAgenda").addEventListener("click", ()=>setTab("agenda"));
     $("#tabProg").addEventListener("click", ()=>setTab("prog"));
       $("#tabSupport").addEventListener("click", ()=>setTab("support"));
-    const sRef = document.getElementById("supportRefresh");
-    if(sRef) sRef.addEventListener("click", renderSupportTab);
-    const sEmp = document.getElementById("supportEmpresa");
-    if(sEmp) sEmp.addEventListener("change", renderSupportTab);
-    const sSt = document.getElementById("supportStatus");
-    if(sSt) sSt.addEventListener("change", renderSupportTab);
       const sRef = document.getElementById("supportRefresh");
       if(sRef) sRef.addEventListener("click", renderSupportTab);
       const sEmp = document.getElementById("supportEmpresa");
@@ -1449,34 +1443,42 @@
         const msg = (document.getElementById("supMsg").value||"").trim();
         const ops = (document.getElementById("supOps").value||"").trim();
         const resEl = document.getElementById("supResult");
-
         if(!sender){ toast("Informe seu nome/cargo."); return; }
         if(!msg){ toast("Escreva a mensagem."); return; }
 
         resEl.textContent = "Enviando…";
         const url = API_URL + (API_URL.includes("?")?"&":"?") + "action=inbox_add&token=" + encodeURIComponent(SUPPORT_TOKEN);
+        const payload = { sender, empresa, tipo, msg, ops, createdAt: nowISO() };
+
+        // Tenta POST com confirmação (sem preflight)
+        const tryConfirmed = async ()=>{
+          const r = await fetch(url, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(payload) });
+          let data = null;
+          try{ data = await r.json(); }catch(_){ data = null; }
+          return data;
+        };
 
         try{
-          // evita preflight: text/plain
-          const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify({ sender, empresa, tipo, msg, ops, createdAt: nowISO() }) });
-          const data = await r.json().catch(()=>null);
+          let data = null;
+          try{ data = await tryConfirmed(); }catch(_){ data = null; }
 
           if(data && data.ok){
-            resEl.textContent = "✅ Enviado. Um editor vai ver na Inbox.";
+            resEl.textContent = "✅ Enviado. Um editor vai ver na aba Suportes.";
             toast("Enviado.");
             document.getElementById("supMsg").value = "";
             document.getElementById("supOps").value = "";
-          }else{
-            const err = (data && data.error) ? data.error : "Falha ao enviar (token/propriedades).";
+            return;
+          }
+          if(data && data.ok === false){
+            const err = data.error || "Falha ao enviar.";
             resEl.textContent = "❌ " + err;
             toast("Falha ao enviar.");
+            return;
           }
-        }catch(e){
-          resEl.textContent = "❌ Falha ao enviar: " + String(e);
-          toast("Falha ao enviar.");
-        }
-      });
-          resEl.textContent = "✅ Enviado. Um editor vai ver na aba Suportes.";
+
+          // Fallback: envia sem confirmação
+          await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+          resEl.textContent = "✅ Enviado (sem confirmação).";
           toast("Enviado.");
           document.getElementById("supMsg").value = "";
           document.getElementById("supOps").value = "";
@@ -1495,24 +1497,37 @@
     }
     async function supportUpdateStatus(id, status){
       const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_update&key=" + encodeURIComponent(settings.key||"");
-      await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify({ id, status, updatedAt: nowISO() }) });
+      const payload = { id, status, updatedAt: nowISO() };
+      try{
+        await fetch(url, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(payload) });
+      }catch(e){
+        await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      }
     }
     async function renderSupportTab(){
       if(!canEdit()) return;
       const listEl = document.getElementById("supportList");
       const countEl = document.getElementById("supportCount");
+      const dbgEl = document.getElementById("supportDebug");
       if(!listEl) return;
+
       listEl.innerHTML = `<div class="muted">Carregando…</div>`;
+      if(dbgEl) dbgEl.textContent = "Carregando…";
+
       try{
         const data = await supportFetchInbox();
         if(!data || data.ok === false){
-          listEl.innerHTML = `<div class="muted">Inbox não disponível.</div>`;
+          const err = (data && data.error) ? data.error : "Inbox não disponível.";
+          listEl.innerHTML = `<div class="muted">❌ ${escapeHtml(err)}</div>`;
           if(countEl) countEl.textContent = "0";
+          if(dbgEl) dbgEl.textContent = "Erro";
           return;
         }
+
         const inbox = Array.isArray(data.inbox) ? data.inbox : [];
         const empSel = (document.getElementById("supportEmpresa")?.value || "ALL");
         const stSel = (document.getElementById("supportStatus")?.value || "OPEN");
+
         const filtered = inbox.filter(it=>{
           const emp = normalizeEmpresa(it.empresa||"");
           const st = String(it.status||"OPEN").toUpperCase();
@@ -1520,11 +1535,15 @@
           if(stSel !== "ALL" && st !== stSel) return false;
           return true;
         });
+
         if(countEl) countEl.textContent = String(filtered.length);
+        if(dbgEl) dbgEl.textContent = `${inbox.length} total • filtro ${filtered.length}`;
+
         if(filtered.length === 0){
           listEl.innerHTML = `<div class="muted">Sem solicitações no filtro.</div>`;
           return;
         }
+
         listEl.innerHTML = filtered.map(it=>{
           const st = String(it.status||"OPEN").toUpperCase();
           const stLabel = (st==="DONE") ? "Resolvido" : "Aberto";
@@ -1552,6 +1571,7 @@
             </div>
           `;
         }).join("");
+
         listEl.querySelectorAll("[data-support-id]").forEach(btn=>{
           btn.addEventListener("click", async ()=>{
             const id = btn.getAttribute("data-support-id");
@@ -1563,8 +1583,9 @@
           });
         });
       }catch(e){
-        listEl.innerHTML = `<div class="muted">Inbox não carregou.</div>`;
+        listEl.innerHTML = `<div class="muted">❌ Inbox não carregou: ${escapeHtml(String(e))}</div>`;
         if(countEl) countEl.textContent = "0";
+        if(dbgEl) dbgEl.textContent = "Erro";
       }
     }
 
