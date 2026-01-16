@@ -424,6 +424,43 @@
       </div>
     </div>
   </div>
+      <!-- SUPORTES (somente editores) -->
+      <div id="viewSupport" style="display:none">
+        <div class="panel">
+          <div class="controls" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <div>
+              <h3 style="margin:0">Suportes (Inbox)</h3>
+              <div class="muted">Solicitações enviadas pelos leitores via 💬. Somente editores conseguem visualizar.</div>
+            </div>
+            <div class="controls">
+              <button class="btn" id="supportRefresh">Recarregar</button>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div class="controls" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+            <div class="pill"><span>🏢</span>
+              <select id="supportEmpresa" style="border:0;outline:0;background:transparent;color:var(--text)">
+                <option value="ALL">Todas</option>
+                <option value="GBR_CLT">GBR CLT</option>
+                <option value="GBR_NOVO">GBR NOVO</option>
+                <option value="3P_CLT">3P CLT</option>
+                <option value="3PORT">3PORT</option>
+              </select>
+            </div>
+            <div class="pill"><span>✅</span>
+              <select id="supportStatus" style="border:0;outline:0;background:transparent;color:var(--text)">
+                <option value="OPEN">Abertos</option>
+                <option value="ALL">Todos</option>
+                <option value="DONE">Resolvidos</option>
+              </select>
+            </div>
+            <span class="chip"><strong id="supportCount">0</strong> itens</span>
+          </div>
+          <div class="hr"></div>
+          <div id="supportList" style="display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow:auto;padding-right:2px"></div>
+          <div class="muted" style="margin-top:10px">Dica: abra o site como editor usando <span class="mono">#edit=1&amp;key=...</span>.</div>
+        </div>
+      </div>
 
   <!-- BM Modal -->
   <div class="backdrop" id="bmBackdrop">
