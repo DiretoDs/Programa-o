@@ -267,6 +267,22 @@
     }
     .tag strong{color:var(--text)}
 
+  
+    /* --- Suportes (profissional e organizado) --- */
+    .tab .badge{ margin-left:8px; }
+    .tab.attn{ border-color: rgba(79,156,255,.65); box-shadow: 0 0 0 2px rgba(79,156,255,.14); }
+    .support-msg{
+      background: rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      padding:10px;
+      white-space:pre-wrap;
+      line-height:1.35;
+    }
+    .support-grid{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .support-ops summary{ cursor:pointer; color: var(--muted); }
+    .support-ops summary:hover{ color: var(--text); }
+
   </style>
 </head>
 <body>
@@ -285,7 +301,7 @@
           <button class="tab" id="tabBoard">BMs</button>
           <button class="tab active" id="tabAgenda">Agenda</button>
           <button class="tab admin" id="tabProg">Programação</button>
-          <button class="tab admin" id="tabSupport">Suportes</button>
+          <button class="tab admin" id="tabSupport">Suportes <span class="badge" id="supportBadge" style="display:none">0</span></button>
         </div>
 
         <div class="pill" title="Status">
@@ -1285,7 +1301,9 @@
     }
 
     // ---------- Tabs ----------
+    let currentTab = "agenda";
     function setTab(which){
+      currentTab = which;
       const isBoard=which==="board", isAgenda=which==="agenda", isProg=which==="prog", isSupport=which==="support";
       $("#tabBoard").classList.toggle("active", isBoard);
       $("#tabAgenda").classList.toggle("active", isAgenda);
@@ -1299,7 +1317,7 @@
 
       if(isAgenda){ renderAgendaProg(); renderAgendaBms(); }
       if(isProg){ renderProg(); }
-      if(isSupport){ renderSupportTab(); }
+      if(isSupport){ renderSupportTab(); markSupportSeen(); }
       if(isBoard){ renderBoard(); }
     }
 
@@ -1375,6 +1393,9 @@
         setTab("agenda");
         // Polling para leitores verem atualizações
         setInterval(poll, 10000);
+        // Polling do suporte (somente editores)
+        supportPoll();
+        setInterval(supportPoll, 15000);
       }catch(e){
         toast("Falha ao carregar do online. Verifique o Deploy do Apps Script.");
         renderAll();
@@ -1495,15 +1516,75 @@
       const r = await fetch(url, { cache:"no-store" });
       return await r.json();
     }
-    async function supportUpdateStatus(id, status){
-      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_update&key=" + encodeURIComponent(settings.key||"");
-      const payload = { id, status, updatedAt: nowISO() };
-      try{
-        await fetch(url, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(payload) });
-      }catch(e){
-        await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+
+    function formatDT(iso){
+      if(!iso) return "—";
+      const d = new Date(iso);
+      if(isNaN(d.getTime())) return String(iso);
+      return d.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+    }
+
+    function updateSupportBadge(openCount){
+      const b = document.getElementById("supportBadge");
+      if(!b) return;
+      if(openCount > 0){
+        b.style.display = "inline-flex";
+        b.textContent = String(openCount);
+      }else{
+        b.style.display = "none";
+        b.textContent = "0";
       }
     }
+
+    let supportLatestAt = "";
+
+    function markSupportSeen(){
+      if(!canEdit()) return;
+      if(supportLatestAt){
+        localStorage.setItem("support_last_seen_at", supportLatestAt);
+        document.getElementById("tabSupport")?.classList.remove("attn");
+      }
+    }
+
+    async function supportPoll(){
+      if(!canEdit()) return;
+      try{
+        const data = await supportFetchInbox();
+        if(!data || data.ok === false) return;
+        const inbox = Array.isArray(data.inbox) ? data.inbox : [];
+        const open = inbox.filter(it=> String(it.status||"OPEN").toUpperCase() !== "DONE");
+        updateSupportBadge(open.length);
+
+        // normalmente vem ordenado desc por createdAt
+        supportLatestAt = (open[0] && open[0].createdAt) ? String(open[0].createdAt) : ((inbox[0] && inbox[0].createdAt) ? String(inbox[0].createdAt) : "");
+
+        const lastSeen = localStorage.getItem("support_last_seen_at") || "";
+        if(supportLatestAt){
+          const newer = !lastSeen || (new Date(supportLatestAt).getTime() > new Date(lastSeen).getTime());
+          if(newer && currentTab !== "support"){
+            toast("Novo suporte recebido.");
+            document.getElementById("tabSupport")?.classList.add("attn");
+          }
+          if(currentTab === "support"){
+            // se já está na aba, considera visto
+            markSupportSeen();
+          }
+        }
+      }catch(_){ }
+    }
+
+    async function supportUpdateItem(payload){
+      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_update&key=" + encodeURIComponent(settings.key||"");
+      payload.updatedAt = nowISO();
+      try{
+        const r = await fetch(url, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(payload) });
+        try{ return await r.json(); }catch(_){ return null; }
+      }catch(e){
+        try{ await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) }); }catch(_){ }
+        return null;
+      }
+    }
+
     async function renderSupportTab(){
       if(!canEdit()) return;
       const listEl = document.getElementById("supportList");
@@ -1525,6 +1606,13 @@
         }
 
         const inbox = Array.isArray(data.inbox) ? data.inbox : [];
+        const openCount = inbox.filter(it=> String(it.status||"OPEN").toUpperCase() !== "DONE").length;
+        updateSupportBadge(openCount);
+
+        // latest
+        supportLatestAt = (inbox[0] && inbox[0].createdAt) ? String(inbox[0].createdAt) : supportLatestAt;
+        if(dbgEl) dbgEl.textContent = `Atualizado: ${formatDT(nowISO())} • ${inbox.length} total`;
+
         const empSel = (document.getElementById("supportEmpresa")?.value || "ALL");
         const stSel = (document.getElementById("supportStatus")?.value || "OPEN");
 
@@ -1537,58 +1625,102 @@
         });
 
         if(countEl) countEl.textContent = String(filtered.length);
-        if(dbgEl) dbgEl.textContent = `${inbox.length} total • filtro ${filtered.length}`;
 
         if(filtered.length === 0){
           listEl.innerHTML = `<div class="muted">Sem solicitações no filtro.</div>`;
           return;
         }
 
+        // Cards (simples e organizados)
         listEl.innerHTML = filtered.map(it=>{
+          const id = String(it.id||"");
           const st = String(it.status||"OPEN").toUpperCase();
-          const stLabel = (st==="DONE") ? "Resolvido" : "Aberto";
-          const ops = (it.ops||"").trim();
-          const btnLabel = (st==="DONE") ? "Reabrir" : "Marcar resolvido";
-          const btnClass = (st==="DONE") ? "btn" : "btn primary";
+          const stLabel = (st === "DONE") ? "Resolvido" : "Aberto";
+          const ops = String(it.ops||"").trim();
+
+          const priority = String(it.priority||it.prioridade||"MEDIA").toUpperCase();
+          const assignee = String(it.assignee||it.responsavel||"");
+
+          const toggleLabel = (st === "DONE") ? "Reabrir" : "Marcar resolvido";
+          const toggleClass = (st === "DONE") ? "btn" : "btn primary";
+
           return `
-            <div class="inbox-item">
+            <div class="inbox-item" data-support-card="${escapeHtml(id)}">
               <div class="inbox-top">
                 <div>
                   <b>${escapeHtml(it.sender||"")}</b>
-                  <div class="muted">${escapeHtml(it.createdAt||"")}</div>
+                  <div class="muted">${escapeHtml(formatDT(it.createdAt||""))}</div>
                 </div>
                 <span class="tag"><strong>${escapeHtml(stLabel)}</strong></span>
               </div>
+
               <div class="inbox-meta">
                 <span class="tag"><strong>🏢</strong> ${escapeHtml(empresaLabel(it.empresa||""))}</span>
                 <span class="tag"><strong>🧾</strong> ${escapeHtml(it.tipo||"")}</span>
               </div>
-              <div>${escapeHtml(it.msg||"")}</div>
-              ${ops ? `<div class="tag" style="white-space:pre-wrap"><strong>Operadores:</strong><br>${escapeHtml(ops)}</div>` : ``}
-              <div class="row">
-                <button class="${btnClass}" data-support-id="${escapeHtml(it.id||"")}" data-support-st="${st}">${btnLabel}</button>
+
+              <div class="support-msg">${escapeHtml(it.msg||"")}</div>
+
+              ${ops ? `
+                <details class="support-ops">
+                  <summary>Lista de operadores</summary>
+                  <div class="support-msg" style="margin-top:8px">${escapeHtml(ops)}</div>
+                </details>
+              ` : ``}
+
+              <div class="support-grid" style="margin-top:8px">
+                <div class="pill" style="padding:8px 10px" title="Prioridade">
+                  <span>⚑</span>
+                  <select data-support-priority="${escapeHtml(id)}" style="border:0;outline:0;background:transparent;color:var(--text)">
+                    <option value="ALTA" ${priority==="ALTA"?"selected":""}>Alta</option>
+                    <option value="MEDIA" ${(priority==="MEDIA"||priority==="MÉDIA")?"selected":""}>Média</option>
+                    <option value="BAIXA" ${priority==="BAIXA"?"selected":""}>Baixa</option>
+                  </select>
+                </div>
+
+                <input class="cell" style="max-width:260px" data-support-assignee="${escapeHtml(id)}" placeholder="Responsável (ex: João)" value="${escapeHtml(assignee)}" />
+
+                <button class="btn" data-support-save="${escapeHtml(id)}">Salvar</button>
+                <button class="${toggleClass}" data-support-toggle="${escapeHtml(id)}" data-support-next="${st === "DONE" ? "OPEN" : "DONE"}">${toggleLabel}</button>
               </div>
             </div>
           `;
         }).join("");
 
-        listEl.querySelectorAll("[data-support-id]").forEach(btn=>{
-          btn.addEventListener("click", async ()=>{
-            const id = btn.getAttribute("data-support-id");
-            const st = btn.getAttribute("data-support-st");
-            const next = (String(st).toUpperCase()==="DONE") ? "OPEN" : "DONE";
-            await supportUpdateStatus(id, next);
-            toast("Atualizado.");
+        // Bind actions
+        listEl.querySelectorAll('[data-support-save]').forEach(btn=>{
+          btn.addEventListener('click', async ()=>{
+            const id = btn.getAttribute('data-support-save');
+            const pr = document.querySelector(`[data-support-priority="${CSS.escape(id)}"]`)?.value || "MEDIA";
+            const asg = document.querySelector(`[data-support-assignee="${CSS.escape(id)}"]`)?.value || "";
+            const card = document.querySelector(`[data-support-card="${CSS.escape(id)}"]`);
+            const st = (card?.querySelector('[data-support-toggle]')?.getAttribute('data-support-next') === 'OPEN') ? 'DONE' : 'OPEN';
+            const resp = await supportUpdateItem({ id, status: st, priority: pr, assignee: asg });
+            if(resp && resp.ok === false){ toast(resp.error || "Falha ao salvar."); }
+            else toast("Salvo.");
             renderSupportTab();
           });
         });
+
+        listEl.querySelectorAll('[data-support-toggle]').forEach(btn=>{
+          btn.addEventListener('click', async ()=>{
+            const id = btn.getAttribute('data-support-toggle');
+            const next = btn.getAttribute('data-support-next') || "DONE";
+            const pr = document.querySelector(`[data-support-priority="${CSS.escape(id)}"]`)?.value || "MEDIA";
+            const asg = document.querySelector(`[data-support-assignee="${CSS.escape(id)}"]`)?.value || "";
+            const resp = await supportUpdateItem({ id, status: next, priority: pr, assignee: asg });
+            if(resp && resp.ok === false){ toast(resp.error || "Falha ao atualizar."); }
+            else toast("Atualizado.");
+            renderSupportTab();
+          });
+        });
+
       }catch(e){
         listEl.innerHTML = `<div class="muted">❌ Inbox não carregou: ${escapeHtml(String(e))}</div>`;
         if(countEl) countEl.textContent = "0";
         if(dbgEl) dbgEl.textContent = "Erro";
       }
     }
-
 
     init();
   </script>
