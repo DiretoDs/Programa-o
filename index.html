@@ -306,7 +306,7 @@
       <div class="brand">
         <div class="logo"></div>
         <div class="title">
-          <b>Planejamento - Parceiro</b>
+          <b>Organizador</b>
           <span id="subtitleReader">ONLINE • Leitura (Agenda + BMs)</span>
           <span id="subtitleEditor" style="display:none">ONLINE • Edição via <span class="mono">#edit=1&key=...</span> • Supervisor via <span class="mono">&supkey=...</span></span>
         </div>
@@ -1497,6 +1497,19 @@ $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent =
     $("#tabBoard").addEventListener("click", ()=>setTab("board"));
     $("#tabAgenda").addEventListener("click", ()=>setTab("agenda"));
     $("#tabRodizio").addEventListener("click", ()=>setTab("rodizio"));
+
+    // Rodízio listeners
+    const _rodSend = document.getElementById('rodSend');
+    if(_rodSend) _rodSend.addEventListener('click', sendRodizio);
+    const _rodRefresh = document.getElementById('rodRefresh');
+    if(_rodRefresh) _rodRefresh.addEventListener('click', renderRodizio);
+    const _rodEmp = document.getElementById('rodFilterEmpresa');
+    if(_rodEmp) _rodEmp.addEventListener('change', renderRodizio);
+    const _rodDate = document.getElementById('rodFilterDate');
+    if(_rodDate) _rodDate.addEventListener('change', renderRodizio);
+    const _rodClear = document.getElementById('rodClearFilters');
+    if(_rodClear) _rodClear.addEventListener('click', ()=>{ if(_rodEmp) _rodEmp.value='ALL'; if(_rodDate) _rodDate.value=''; renderRodizio(); });
+
     $("#tabProg").addEventListener("click", ()=>setTab("prog"));
       $("#tabSupport").addEventListener("click", ()=>setTab("support"));
       const sRef = document.getElementById("supportRefresh");
@@ -1994,6 +2007,184 @@ const id = btn.getAttribute('data-support-toggle');
       }
     }
 
+
+
+    // ---------- RODIZIO DO DIA ----------
+    function normLines(t){
+      return String(t||"").replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').map(s=>s.trim()).filter(Boolean);
+    }
+
+    async function sendRodizio(){
+      const date = document.getElementById('rodDate')?.value || todayISO();
+      const sup = String(document.getElementById('rodSupervisor')?.value||'').trim();
+      const emp = String(document.getElementById('rodEmpresa')?.value||'').trim();
+      const ops = document.getElementById('rodOperadores')?.value || '';
+      const obs = String(document.getElementById('rodObs')?.value||'').trim();
+
+      if(!sup){ toast('Informe o Supervisor.'); return; }
+      if(!emp){ toast('Selecione a empresa.'); return; }
+      const lines = normLines(ops);
+      if(lines.length === 0){ toast('Informe pelo menos 1 operador.'); return; }
+
+      const now = new Date();
+      const createdAt = `${date} ${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+
+      const payload = {
+        tipo: 'RODIZIO',
+        sender: sup,
+        empresa: emp,
+        msg: obs || 'Rodízio do dia',
+        ops: lines.join('\n'),
+        createdAt
+      };
+
+      const url = API_URL + (API_URL.includes('?')?'&':'?') + 'action=inbox_add&token=' + encodeURIComponent(SUPPORT_TOKEN);
+
+      const tryConfirmed = async ()=>{
+        const r = await fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(payload)
+        });
+        let data = null;
+        try{ data = await r.json(); }catch(_){ data = null; }
+        return data;
+      };
+
+      try{
+        let data = null;
+        try{ data = await tryConfirmed(); }catch(_){ data = null; }
+
+        if(data && data.ok){
+          toast('Rodízio enviado.');
+          const ta = document.getElementById('rodOperadores');
+          const ob = document.getElementById('rodObs');
+          if(ta) ta.value = '';
+          if(ob) ob.value = '';
+          return;
+        }
+
+        if(data && data.ok === false){
+          toast(data.error || 'Falha ao enviar.');
+          return;
+        }
+
+        // fallback: envia sem confirmação
+        await fetch(url, { method:'POST', mode:'no-cors', body: JSON.stringify(payload) });
+        toast('Rodízio enviado.');
+        const ta = document.getElementById('rodOperadores');
+        const ob = document.getElementById('rodObs');
+        if(ta) ta.value = '';
+        if(ob) ob.value = '';
+      }catch(e){
+        toast('Falha ao enviar.');
+      }
+    }
+
+    async function renderRodizio(){
+      const rb = document.getElementById('rodReaderBox');
+      const eb = document.getElementById('rodEditorBox');
+      const refreshBtn = document.getElementById('rodRefresh');
+      const listEl = document.getElementById('rodList');
+      const countEl = document.getElementById('rodCount');
+      const dbgEl = document.getElementById('rodDebug');
+
+      if(rb) rb.style.display = canEdit() ? 'none' : 'block';
+      if(eb) eb.style.display = canEdit() ? 'block' : 'none';
+      if(refreshBtn) refreshBtn.style.display = canEdit() ? 'inline-flex' : 'none';
+
+      if(!canEdit()){
+        const d = document.getElementById('rodDate');
+        if(d && !d.value) d.value = todayISO();
+        return;
+      }
+
+      if(listEl) listEl.innerHTML = '<div class="muted">Carregando…</div>';
+      if(dbgEl) dbgEl.textContent = 'Carregando…';
+
+      try{
+        const data = await supportFetchInbox();
+        if(!data || data.ok === false){
+          const err = (data && data.error) ? data.error : 'Inbox não disponível.';
+          if(listEl) listEl.innerHTML = `<div class="muted">❌ ${escapeHtml(err)}</div>`;
+          if(countEl) countEl.textContent = '0';
+          if(dbgEl) dbgEl.textContent = 'Erro';
+          return;
+        }
+
+        const inbox = Array.isArray(data.inbox) ? data.inbox : [];
+        const all = inbox.filter(it=> String(it.tipo||'').toUpperCase()==='RODIZIO');
+
+        const empSel = document.getElementById('rodFilterEmpresa')?.value || 'ALL';
+        const dateSel = document.getElementById('rodFilterDate')?.value || '';
+
+        const filtered = all.filter(it=>{
+          const emp = normalizeBucket(it.empresa||'');
+          const d = String(it.createdAt||'').slice(0,10);
+          if(empSel !== 'ALL' && emp !== empSel) return false;
+          if(dateSel && d !== dateSel) return false;
+          return true;
+        });
+
+        if(countEl) countEl.textContent = String(filtered.length);
+        if(dbgEl) dbgEl.textContent = `Atualizado: ${formatDT(nowISO())} • ${filtered.length} no filtro`;
+
+        if(!listEl) return;
+        if(filtered.length === 0){
+          listEl.innerHTML = '<div class="muted">Sem rodízios no filtro.</div>';
+          return;
+        }
+
+        listEl.innerHTML = filtered.map(it=>{
+          const id = String(it.id||'');
+          const when = String(it.createdAt||'');
+          const emp = bucketLabel(normalizeBucket(it.empresa||''));
+          const sender = String(it.sender||'');
+          const msg = String(it.msg||'');
+          const ops = String(it.ops||'');
+          const canDel = isSupervisor();
+          return `
+            <div class="inbox-item">
+              <div class="inbox-top">
+                <div>
+                  <b>${escapeHtml(sender || '—')}</b>
+                  <div class="muted">${escapeHtml(formatDT(when))}</div>
+                </div>
+                <span class="tag"><strong>${escapeHtml(emp)}</strong></span>
+              </div>
+              <div class="support-msg">${escapeHtml(msg)}</div>
+              ${ops ? `
+                <details class="support-ops">
+                  <summary>Operadores (${normLines(ops).length})</summary>
+                  <div class="support-msg" style="margin-top:8px">${escapeHtml(ops)}</div>
+                </details>
+              ` : ``}
+              ${canDel ? `<div class="support-grid" style="margin-top:8px"><button class="btn danger" data-rod-del="${escapeHtml(id)}">Apagar</button></div>` : ``}
+            </div>
+          `;
+        }).join('');
+
+        // bind delete
+        if(isSupervisor()){
+          listEl.querySelectorAll('[data-rod-del]').forEach(btn=>{
+            btn.addEventListener('click', async ()=>{
+              const id = btn.getAttribute('data-rod-del');
+              if(!id) return;
+              if(!confirm('Apagar este rodízio?')) return;
+              const resp = await supportDeleteItem({ id });
+              if(resp && resp.ok === false) toast(resp.error || 'Falha ao apagar.');
+              else toast('Apagado.');
+              renderRodizio();
+            });
+          });
+        }
+
+      }catch(e){
+        if(listEl) listEl.innerHTML = `<div class="muted">❌ Erro: ${escapeHtml(String(e))}</div>`;
+        if(countEl) countEl.textContent = '0';
+        if(dbgEl) dbgEl.textContent = 'Erro';
+      }
+    }
     init();
   </script>
 </body>
