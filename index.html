@@ -6,6 +6,7 @@
   <title>Organizador Online — BMs + Programação</title>
   <style>
     :root{
+      color-scheme: dark;
       --bg:#0b1220;
       --text:#e7eefc;
       --muted:#a9b6d3;
@@ -258,6 +259,16 @@
     }
     .tag strong{color:var(--text)}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+    /* Fix dropdown (select/options) em tema escuro */
+    select{
+      background-color: rgba(255,255,255,.04);
+    }
+    option{
+      background-color: #0b1220;
+      color: #e7eefc;
+    }
+
   </style>
 </head>
 <body>
@@ -276,7 +287,8 @@
           <button class="tab" id="tabBoard">BMs</button>
           <button class="tab active" id="tabAgenda">Agenda</button>
           <button class="tab" id="tabProg">Programação</button>
-        </div>
+                  <button class="tab" id="tabSupport">Suportes</button>
+</div>
 
         <div class="pill" title="Status">
           <span class="dot" id="modeDot"></span>
@@ -594,17 +606,7 @@
             <div class="muted">O que você enviar aqui <b>não aparece para outros leitores</b>. Somente quem estiver no link de <b>edição</b> consegue ver e tratar as solicitações (Inbox).</div>
           </div>
 
-          <div class="field" id="inboxPanel" style="display:none">
-            <div class="row" style="justify-content:space-between">
-              <div>
-                <label style="display:block">Inbox (somente editores)</label>
-                <div class="muted">Recarregue para ver as solicitações.</div>
-              </div>
-              <button class="btn" id="inboxRefresh">Recarregar</button>
-            </div>
-            <div id="inboxList" style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto;padding-right:2px"></div>
-            <div class="muted" style="margin-top:8px">Se a Inbox não carregar, o Apps Script ainda não foi atualizado com o módulo de suporte.</div>
-          </div>
+          <div class="field" id="inboxPanel" style="display:none"></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -777,6 +779,7 @@
       $("#btnImport").disabled = !canEdit();
       // Hide Programação for leitores
       $("#tabProg").style.display = canEdit() ? "inline-flex" : "none";
+      $("#tabSupport").style.display = canEdit() ? "inline-flex" : "none";
       if(!canEdit()){
         $("#viewProg").style.display = "none";
         if($("#tabProg").classList.contains("active")){ setTab("agenda"); }
@@ -1257,6 +1260,7 @@
     $("#tabBoard").addEventListener("click", ()=>setTab("board"));
     $("#tabAgenda").addEventListener("click", ()=>setTab("agenda"));
     $("#tabProg").addEventListener("click", ()=>setTab("prog"));
+    $("#tabSupport").addEventListener("click", ()=>setTab("support"));
 
     $("#btnAdd").addEventListener("click", ()=>openBm(null));
     $("#btnRefresh").addEventListener("click", async ()=>{
@@ -1364,7 +1368,7 @@
       const back = document.getElementById("supportBackdrop");
       if(!fab || !back) return;
 
-      const open = ()=>{ back.classList.add("open"); maybeShowInbox(); };
+      const open = ()=>{ back.classList.add("open"); };
       const close = ()=> back.classList.remove("open");
 
       document.getElementById("supportClose")?.addEventListener("click", close);
@@ -1460,14 +1464,6 @@
         }catch(e){
           list.innerHTML = `<div class="muted">Inbox não carregou (Apps Script precisa do módulo de suporte).</div>`;
         }
-      }
-
-      function maybeShowInbox(){
-        const panel = document.getElementById("inboxPanel");
-        if(!panel) return;
-        const editor = (typeof canEdit === "function" && canEdit());
-        panel.style.display = editor ? "block" : "none";
-        if(editor) loadInbox();
       }
 
       document.getElementById("inboxRefresh")?.addEventListener("click", loadInbox);
