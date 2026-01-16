@@ -283,7 +283,22 @@
     .support-ops summary{ cursor:pointer; color: var(--muted); }
     .support-ops summary:hover{ color: var(--text); }
 
-  </style>
+  
+  .bm-details{
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:16px;
+    padding:10px 12px;
+    background: rgba(255,255,255,.04);
+  }
+  .bm-details > summary{
+    cursor:pointer;
+    list-style:none;
+    font-weight:600;
+    opacity:.95;
+  }
+  .bm-details > summary::-webkit-details-marker{ display:none; }
+
+</style>
 </head>
 <body>
   <div class="app">
@@ -291,17 +306,20 @@
       <div class="brand">
         <div class="logo"></div>
         <div class="title">
-          <b>Organizador</b>
-          <span>ONLINE fixo (/exec) • Leitura para todos • Edição via #edit=1&key=...</span>
+          <b>Planejamento - Parceiros</b>
+          <span id="subtitleReader">ONLINE • Leitura (Agenda + BMs)</span>
+          <span id="subtitleEditor" style="display:none">ONLINE • Edição via <span class="mono">#edit=1&key=...</span> • Supervisor via <span class="mono">&supkey=...</span></span>
         </div>
       </div>
 
       <div class="controls">
         <div class="tabs">
-          <button class="tab" id="tabBoard">BMs</button>
+          
           <button class="tab active" id="tabAgenda">Agenda</button>
+          <button class="tab" id="tabBoard">BMs</button>
           <button class="tab admin" id="tabProg">Programação</button>
           <button class="tab admin" id="tabSupport">Suportes <span class="badge" id="supportBadge" style="display:none">0</span></button>
+        
         </div>
 
         <div class="pill" title="Status">
@@ -484,6 +502,8 @@
             </select>
           </div>
 
+          <button class="btn" id="supportConfigBtn" style="display:none">Configurar responsáveis</button>
+
           <span class="chip"><strong id="supportCount">0</strong> itens</span>
           <span class="muted" id="supportDebug">—</span>
         </div>
@@ -502,12 +522,14 @@
         <b id="bmTitle">BM</b>
         <button class="btn" id="bmClose">✕</button>
       </div>
+
       <div class="modal-body">
         <div style="display:flex;flex-direction:column;gap:12px">
           <div class="field">
             <label>Identificação da BM</label>
             <input class="cell" id="fBmId" placeholder="Ex: GBR NOVO - 7436" />
           </div>
+
           <div class="field">
             <label>Empresa / Produto</label>
             <select class="cell" id="fEmpresa">
@@ -518,69 +540,84 @@
               <option value="3PORT">3PORT</option>
             </select>
           </div>
-          <div class="field">
-            <label>Status</label>
-            <select class="cell" id="fColumn">
-              <option value="standby">STAND BY</option>
-              <option value="numeros">NÚMEROS</option>
-              <option value="cartao">CARTÃO</option>
-              <option value="template">TEMPLATE</option>
-              <option value="disparos">DISPAROS</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Qualidade</label>
-            <select class="cell" id="fQuality">
-              <option value="APROVADO">Aprovado</option>
-              <option value="MEDIA">Qualidade média</option>
-              <option value="BAIXA">Qualidade baixa (risco)</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Números (até 10) — um por linha</label>
-            <textarea class="cell" id="fNumbers" placeholder="11999999999&#10;11888888888"></textarea>
-            <div class="muted">Contagem: <span class="mono" id="fNumbersCount">0/10</span></div>
-          </div>
-          <div class="field">
-            <label>Observações</label>
-            <textarea class="cell" id="fNotes"></textarea>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div class="field">
-            <label>Criada em</label>
-            <input class="cell" id="fCreatedAt" disabled />
-          </div>
-          <div class="field">
-            <label>Última edição</label>
-            <input class="cell" id="fUpdatedAt" disabled />
-          </div>
-          <div class="field">
-            <label>Agendamento (data)</label>
-            <input class="cell" id="fDisparoDate" type="date" />
-          </div>
-          <div class="field">
-            <label>Agendamento (dia da semana)</label>
-            <select class="cell" id="fDisparoWeekday">
-              <option value="">—</option>
-              <option value="SEGUNDA">Segunda</option>
-              <option value="TERCA">Terça</option>
-              <option value="QUARTA">Quarta</option>
-              <option value="QUINTA">Quinta</option>
-              <option value="SEXTA">Sexta</option>
-              <option value="SABADO">Sábado</option>
-              <option value="DOMINGO">Domingo</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Ações</label>
-            <div class="controls" style="justify-content:flex-start">
-              <button class="btn danger" id="bmDelete">Excluir</button>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="field">
+              <label>Status</label>
+              <select class="cell" id="fColumn">
+                <option value="standby">STAND BY</option>
+                <option value="numeros">NÚMEROS</option>
+                <option value="cartao">CARTÃO</option>
+                <option value="template">TEMPLATE</option>
+                <option value="disparos">DISPAROS</option>
+              </select>
             </div>
-            <div class="muted">Edição só no link com <span class="mono">#edit=1&key=...</span></div>
+
+            <div class="field">
+              <label>Qualidade</label>
+              <select class="cell" id="fQuality">
+                <option value="APROVADO">Aprovado</option>
+                <option value="MEDIA">Qualidade média</option>
+                <option value="BAIXA">Qualidade baixa (risco)</option>
+              </select>
+            </div>
           </div>
+
+          <details id="bmMore" class="bm-details">
+            <summary>Detalhes (números, agendamento, observações)</summary>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+
+              <div class="field" id="bmNumbersWrap">
+                <label>Números (até 10) — um por linha</label>
+                <textarea class="cell" id="fNumbers" placeholder="11999999999&#10;11888888888"></textarea>
+                <div class="muted">Contagem: <span class="mono" id="fNumbersCount">0/10</span></div>
+              </div>
+
+              <div class="field" id="bmScheduleWrap">
+                <label>Agendamento (data)</label>
+                <input class="cell" id="fDisparoDate" type="date" />
+                <div class="muted" style="margin-top:6px">ou selecione um dia da semana</div>
+                <select class="cell" id="fDisparoWeekday" style="margin-top:6px">
+                  <option value="">—</option>
+                  <option value="SEGUNDA">Segunda</option>
+                  <option value="TERCA">Terça</option>
+                  <option value="QUARTA">Quarta</option>
+                  <option value="QUINTA">Quinta</option>
+                  <option value="SEXTA">Sexta</option>
+                  <option value="SABADO">Sábado</option>
+                  <option value="DOMINGO">Domingo</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Observações</label>
+                <textarea class="cell" id="fNotes"></textarea>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="field">
+                  <label>Criada em</label>
+                  <input class="cell" id="fCreatedAt" disabled />
+                </div>
+                <div class="field">
+                  <label>Última edição</label>
+                  <input class="cell" id="fUpdatedAt" disabled />
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Ações</label>
+                <div class="controls" style="justify-content:flex-start">
+                  <button class="btn danger" id="bmDelete">Excluir</button>
+                </div>
+                <div class="muted">Edição só no link com <span class="mono">#edit=1&key=...</span></div>
+              </div>
+            </div>
+          </details>
+
         </div>
       </div>
+
       <div class="modal-footer">
         <div class="muted" id="bmMode">Leitura</div>
         <div class="controls">
@@ -591,7 +628,7 @@
     </div>
   </div>
 
-  <!-- Import Modal -->
+<!-- Import Modal -->
   <div class="backdrop" id="importBackdrop">
     <div class="modal" style="width:min(780px,100%)">
       <div class="modal-header">
@@ -780,7 +817,8 @@
         dispatches: dispatches.map(d=>[
           d.id||"", d.date||"", d.bucket||"", d.operator||"",
           d.code||"", Number(d.qty||0), d.time||""
-        ])
+        ]),
+        supportCfg: ((st.supportConfig && Array.isArray(st.supportConfig.responsaveis)) ? st.supportConfig.responsaveis : [])
       });
       let h=0; for(let k=0;k<str.length;k++) h=(h*31+str.charCodeAt(k))>>>0;
       return String(h);
@@ -840,6 +878,15 @@
       $("#btnSave").disabled = !canEdit();
       $("#btnAddLine").disabled = !canEdit();
       $("#btnImport").disabled = !canEdit();
+      // Hide editor-only controls in Leitura
+      ["btnAdd","btnSave","btnAddLine","btnImport"].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.style.display = canEdit() ? "inline-flex" : "none";
+      });
+      const sr = document.getElementById("subtitleReader");
+      const se = document.getElementById("subtitleEditor");
+      if(sr && se){ sr.style.display = canEdit() ? "none" : "inline"; se.style.display = canEdit() ? "inline" : "none"; }
+
       // Hide Programação for leitores
       $("#tabProg").style.display = canEdit() ? "inline-flex" : "none";
       $("#tabSupport").style.display = canEdit() ? "inline-flex" : "none";
@@ -998,6 +1045,12 @@
       $("#fDisparoDate").value = bm?.disparoDate || "";
       $("#fDisparoWeekday").value = bm?.disparoWeekday || "";
       $("#fNumbersCount").textContent = `${normalizeNumbers($("#fNumbers").value).length}/10`;
+      updateBmDetailsUI();
+      const more = document.getElementById("bmMore");
+      if(more){
+        const hasDetails = (bm && (((bm.numbers||[]).length>0) || (bm.disparoDate||"") || (bm.disparoWeekday||"") || String(bm.notes||"").trim()));
+        more.open = !!hasDetails;
+      }
 
       const lock = !canEdit();
       ["fBmId","fEmpresa","fColumn","fQuality","fNumbers","fNotes","fDisparoDate","fDisparoWeekday"].forEach(k=>{
@@ -1010,12 +1063,30 @@
 
       $("#bmBackdrop").classList.add("open");
     }
-    function closeBm(){
+    
+    function updateBmDetailsUI(){
+      const col = ($("#fColumn").value || "standby");
+      const nw = document.getElementById("bmNumbersWrap");
+      const sw = document.getElementById("bmScheduleWrap");
+      if(nw) nw.style.display = (col === "numeros") ? "block" : "none";
+      if(sw) sw.style.display = (col === "disparos") ? "block" : "none";
+    }
+
+function closeBm(){
       $("#bmBackdrop").classList.remove("open");
       currentBmId = null;
     }
 
-    $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent = `${normalizeNumbers($("#fNumbers").value).length}/10`; });
+        $("#fColumn").addEventListener("change", ()=>{
+      updateBmDetailsUI();
+      const col = ($("#fColumn").value||"");
+      if(col==="numeros" || col==="disparos"){
+        const more = document.getElementById("bmMore");
+        if(more) more.open = true;
+      }
+    });
+
+$("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent = `${normalizeNumbers($("#fNumbers").value).length}/10`; });
 
     $("#bmSave").addEventListener("click", ()=>{
       if(!canEdit()) return;
@@ -1344,6 +1415,17 @@
       if(sSt) sSt.addEventListener("change", renderSupportTab);
     const sResp = document.getElementById("supportResp");
     if(sResp) sResp.addEventListener("change", renderSupportTab);
+    const sCfg = document.getElementById("supportConfigBtn");
+    if(sCfg) sCfg.addEventListener("click", ()=>{
+      if(!isSupervisor()){ toast("Somente supervisores."); return; }
+      const cur = getSupportResponsaveis().join(", ");
+      const val = prompt("Responsáveis (vírgula):", cur);
+      if(val === null) return;
+      const list = String(val).split(",").map(s=>s.trim()).filter(Boolean);
+      setSupportResponsaveis(list);
+      toast("Lista de responsáveis atualizada.");
+      renderSupportTab();
+    });
 
     $("#btnAdd").addEventListener("click", ()=>openBm(null));
     $("#btnRefresh").addEventListener("click", async ()=>{
@@ -1594,13 +1676,28 @@
 
     
 
-    function populateSupportRespOptions(inbox){
+    
+    function getSupportResponsaveis(){
+      const cfg = (state && state.supportConfig) ? state.supportConfig : (state.supportConfig = {});
+      const list = Array.isArray(cfg.responsaveis) ? cfg.responsaveis : [];
+      if(list.length) return list;
+      return ["Danilo","Pedro","Mauricio"];
+    }
+    function setSupportResponsaveis(list){
+      state.supportConfig = state.supportConfig || {};
+      state.supportConfig.responsaveis = (list||[]).map(s=>String(s).trim()).filter(Boolean);
+      scheduleSave();
+    }
+
+function populateSupportRespOptions(inbox){
       const sel = document.getElementById("supportResp");
       if(!sel) return;
       const keep = sel.value || "ALL";
       const base = ["ALL","UNASSIGNED"];
 
       const uniq = new Set();
+      // add configured names
+      getSupportResponsaveis().forEach(n=>uniq.add(String(n).trim()));
       (inbox||[]).forEach(it=>{
         const a = String(it.assignee||it.responsavel||"").trim();
         if(a) uniq.add(a);
@@ -1621,6 +1718,16 @@
       const values = Array.from(sel.options).map(o=>o.value);
       sel.value = values.includes(keep) ? keep : "ALL";
     }
+async function supportDeleteItem(payload){
+      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_delete&key=" + encodeURIComponent(settings.key||"") + "&supkey=" + encodeURIComponent(settings.supkey||"");
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type":"text/plain;charset=utf-8" },
+        body: JSON.stringify(payload || {})
+      });
+      try{ return await res.json(); } catch(_){ return { ok:false, error:"Resposta inválida do servidor."}; }
+    }
+
 async function supportUpdateItem(payload){
       const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_update&key=" + encodeURIComponent(settings.key||"") + "&supkey=" + encodeURIComponent(settings.supkey||"");
       payload.updatedAt = nowISO();
@@ -1661,6 +1768,8 @@ async function supportUpdateItem(payload){
         // latest
         supportLatestAt = (inbox[0] && inbox[0].createdAt) ? String(inbox[0].createdAt) : supportLatestAt;
         if(dbgEl) dbgEl.textContent = `Atualizado: ${formatDT(nowISO())} • ${inbox.length} total • ${isSupervisor()?"Supervisor":"Editor"}`;
+        const cfgBtn = document.getElementById("supportConfigBtn");
+        if(cfgBtn) cfgBtn.style.display = isSupervisor() ? "inline-flex" : "none";
 
         const empSel = (document.getElementById("supportEmpresa")?.value || "ALL");
         const stSel = (document.getElementById("supportStatus")?.value || "OPEN");
@@ -1735,6 +1844,7 @@ async function supportUpdateItem(payload){
 
                 <button class="btn" data-support-save="${escapeHtml(id)}" ${isSupervisor()?"":"disabled"}>Salvar</button>
                 <button class="${toggleClass}" data-support-toggle="${escapeHtml(id)}" data-support-next="${st === "DONE" ? "OPEN" : "DONE"}">${toggleLabel}</button>
+                ${isSupervisor() ? `<button class="btn danger" data-support-del="${escapeHtml(id)}">Apagar</button>` : ``}
               </div>
               ${!isSupervisor() ? `<div class="muted" style="margin-top:8px">Obs: apenas <b>supervisores</b> podem definir Responsável/Prioridade.</div>` : ``}
             </div>
