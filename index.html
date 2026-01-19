@@ -324,6 +324,26 @@
     /* Dashboard detalhe: lista curta + expandir */
     .dashDetailScroll{max-height:260px; overflow:auto;}
     #dashDetailToggle{margin-top:10px;}
+    /* Trend tooltip (Dashboard) */
+    .trendTooltip{
+      position:absolute;
+      z-index:30;
+      display:none;
+      pointer-events:none;
+      background: rgba(7, 12, 24, .92);
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+      border-radius: 14px;
+      min-width: 180px;
+      max-width: 260px;
+      backdrop-filter: blur(8px);
+    }
+    .trendTooltip .ttTitle{font-weight:800; letter-spacing:.2px; margin-bottom:6px}
+    .trendTooltip .ttRow{display:flex; align-items:center; justify-content:space-between; gap:14px; margin:3px 0}
+    .trendTooltip .ttRow span{color: var(--muted); font-size:12px}
+    .trendTooltip .ttRow b{font-family: var(--mono); font-size:12px}
+    .trendTooltip .ttHint{margin-top:6px; color: var(--muted); font-size:11px}
 
   </style>
 </head>
@@ -1172,12 +1192,14 @@
       }
     }
 
-
-    // Dashboard: tiny canvas trend + drilldown modal
+    // Dashboard: tiny canvas trend + drilldown modal (com tooltip)
     const drawTrendCanvas = (canvas, labels, series) => {
       if(!canvas) return;
       const ctx = canvas.getContext('2d');
       if(!ctx) return;
+
+      // cache p/ interatividade
+      canvas.__trendData = { labels: labels || [], series: series || [] };
 
       const dpr = window.devicePixelRatio || 1;
       const w = Math.max(260, canvas.clientWidth || canvas.parentElement?.clientWidth || 600);
@@ -1197,6 +1219,7 @@
         ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
         ctx.fillText('Sem dados no período.', 12, 18);
         ctx.globalAlpha = 1;
+        canvas.__trendMeta = null;
         return;
       }
 
@@ -1209,6 +1232,13 @@
       const padL = 36, padR = 10, padT = 10, padB = 22;
       const iw = w - padL - padR;
       const ih = h0 - padT - padB;
+
+      const n = labels.length;
+      const xAt = (i)=> padL + (n===1 ? 0 : (iw * i/(n-1)));
+      const yAt = (v)=> padT + ih - (ih * (Number(v||0)/maxV));
+
+      // meta (p/ hover/click)
+      canvas.__trendMeta = { w, h0, padL, padR, padT, padB, iw, ih, maxV, labels, series, xAt, yAt };
 
       // grid
       ctx.globalAlpha = 0.22;
@@ -1229,10 +1259,7 @@
       ctx.fillText(String(maxV), 6, padT+12);
       ctx.fillText('0', 10, padT+ih);
 
-      const n = labels.length;
-      const xAt = (i)=> padL + (n===1 ? 0 : (iw * i/(n-1)));
-      const yAt = (v)=> padT + ih - (ih * (Number(v||0)/maxV));
-
+      // lines + points
       series.forEach((s, idx)=>{
         const hue = (idx*70) % 360;
         const stroke = `hsl(${hue} 90% 70%)`;
@@ -1261,6 +1288,136 @@
       ctx.fillText(toBR(first), padL, h0-6);
       const tw = ctx.measureText(toBR(last)).width;
       ctx.fillText(toBR(last), padL+iw-tw, h0-6);
+
+      // --- Interatividade (tooltip + clique) ---
+      if(!canvas.__trendInit){
+        canvas.__trendInit = true;
+
+        const parent = canvas.parentElement || document.body;
+        try{
+          const cs = window.getComputedStyle(parent);
+          if(cs && cs.position === 'static') parent.style.position = 'relative';
+        }catch(e){}
+
+        const tip = document.createElement('div');
+        tip.className = 'trendTooltip';
+        tip.setAttribute('aria-hidden','true');
+        parent.appendChild(tip);
+        canvas.__trendTip = tip;
+
+        let raf = 0;
+        const schedule = (fn)=>{
+          if(raf) cancelAnimationFrame(raf);
+          raf = requestAnimationFrame(fn);
+        };
+
+        const hideTip = ()=>{
+          if(canvas.__trendTip) canvas.__trendTip.style.display = 'none';
+          const m = canvas.__trendMeta;
+          if(m) schedule(()=> drawTrendCanvas(canvas, m.labels, m.series));
+        };
+
+        const pickIndex = (clientX, clientY)=>{
+          const m = canvas.__trendMeta;
+          if(!m || !m.labels || !m.labels.length) return -1;
+          const rect = canvas.getBoundingClientRect();
+          const x = clientX - rect.left;
+          const y = clientY - rect.top;
+          if(x < (m.padL-12) || x > (m.padL+m.iw+12) || y < 0 || y > m.h0) return -1;
+          const n = m.labels.length;
+          if(n <= 1) return 0;
+          const t = (x - m.padL) / m.iw;
+          const idx = Math.max(0, Math.min(n-1, Math.round(t * (n-1))));
+          const xi = m.xAt(idx);
+          if(Math.abs(x - xi) > 14) return -1;
+          return idx;
+        };
+
+        const showAt = (idx, clientX, clientY)=>{
+          const m = canvas.__trendMeta;
+          if(!m || idx < 0) return hideTip();
+
+          const day = String(m.labels[idx]||'');
+          const rows = (m.series||[]).map(s=>{
+            const v = Number((s.values||[])[idx] || 0);
+            return `<div class=\"ttRow\"><span>${escapeHtml(s.name||'—')}</span><b>${v}</b></div>`;
+          }).join('');
+
+          if(canvas.__trendTip){
+            canvas.__trendTip.innerHTML = `<div class=\"ttTitle\">${escapeHtml(toBR(day))}</div>${rows}<div class=\"ttHint\">Passe o mouse para ver valores • Clique para selecionar o dia</div>`;
+            canvas.__trendTip.style.display = 'block';
+
+            const pr = parent.getBoundingClientRect();
+            const left0 = (clientX - pr.left) + 12;
+            const top0  = (clientY - pr.top) + 12;
+
+            // clamp dentro do painel
+            const maxLeft = (parent.clientWidth || 0) - canvas.__trendTip.offsetWidth - 8;
+            const maxTop  = (parent.clientHeight || 0) - canvas.__trendTip.offsetHeight - 8;
+            const left = Math.max(8, Math.min(left0, isFinite(maxLeft) ? maxLeft : left0));
+            const top  = Math.max(8, Math.min(top0,  isFinite(maxTop) ? maxTop : top0));
+
+            canvas.__trendTip.style.left = left + 'px';
+            canvas.__trendTip.style.top  = top + 'px';
+          }
+
+          // highlight (re-draw + linha vertical + pontos)
+          schedule(()=>{
+            drawTrendCanvas(canvas, m.labels, m.series);
+            const mm = canvas.__trendMeta;
+            if(!mm) return;
+            const c = canvas.getContext('2d');
+            const xi = mm.xAt(idx);
+
+            c.save();
+            c.globalAlpha = 0.35;
+            c.strokeStyle = 'rgba(255,255,255,.75)';
+            c.lineWidth = 1;
+            c.beginPath();
+            c.moveTo(xi, mm.padT);
+            c.lineTo(xi, mm.padT + mm.ih);
+            c.stroke();
+            c.globalAlpha = 1;
+
+            (mm.series||[]).forEach((s, sidx)=>{
+              const v = Number((s.values||[])[idx] || 0);
+              const y = mm.yAt(v);
+              const hue = (sidx*70) % 360;
+              const stroke = `hsl(${hue} 90% 70%)`;
+              c.fillStyle = stroke;
+              c.beginPath();
+              c.arc(xi, y, 4.3, 0, Math.PI*2);
+              c.fill();
+              c.strokeStyle = 'rgba(0,0,0,.35)';
+              c.lineWidth = 2;
+              c.stroke();
+            });
+
+            c.restore();
+          });
+        };
+
+        canvas.addEventListener('pointerleave', hideTip);
+        canvas.addEventListener('pointermove', (e)=>{
+          const idx = pickIndex(e.clientX, e.clientY);
+          if(idx < 0) return hideTip();
+          showAt(idx, e.clientX, e.clientY);
+        });
+
+        canvas.addEventListener('pointerdown', (e)=>{
+          const idx = pickIndex(e.clientX, e.clientY);
+          if(idx < 0) return;
+          const m = canvas.__trendMeta;
+          if(!m) return;
+          const day = String(m.labels[idx]||'');
+          const daySel = document.getElementById('dashDay');
+          if(daySel && day){
+            daySel.value = day;
+            try{ renderDashboard(); }catch(err){}
+            try{ daySel.scrollIntoView({behavior:'smooth', block:'center'}); }catch(err){}
+          }
+        });
+      }
     };
 
     const openDashDetail = (day, bucket) => {
