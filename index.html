@@ -1088,6 +1088,44 @@
     let syncing=false, dirty=false, lastSig="";
     let saveTimer=null;
 
+    // --- Rede/Salvamento (robusto) ---
+    let changeRev=0;
+    let savedRev=0;
+    let saveInFlight=false;
+    let pendingSave=false;
+    const DRAFT_LS_PREFIX = "execDraft:";
+    const draftKey = ()=> (DRAFT_LS_PREFIX + (settings.key||""));
+
+    function safeClone(obj){
+      try{
+        if(typeof structuredClone === "function") return structuredClone(obj);
+      }catch(e){}
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function persistDraft(){
+      if(!settings.key) return;
+      try{
+        localStorage.setItem(draftKey(), JSON.stringify({ ts: Date.now(), state }));
+      }catch(e){}
+    }
+
+    function readDraft(){
+      if(!settings.key) return null;
+      try{
+        const raw = localStorage.getItem(draftKey());
+        if(!raw) return null;
+        const d = JSON.parse(raw);
+        if(!d || !d.state) return null;
+        return d;
+      }catch(e){ return null; }
+    }
+
+    function clearDraft(){
+      if(!settings.key) return;
+      try{ localStorage.removeItem(draftKey()); }catch(e){}
+    }
+
     const $ = (s)=>document.querySelector(s);
     const toast = (m)=>{ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(window.__tt); window.__tt=setTimeout(()=>t.classList.remove("show"), 2600); };
     const pad2=(n)=>String(n).padStart(2,"0");
@@ -1361,33 +1399,54 @@
       return j;
     }
 
-    async function apiPOST_bestEffort(){
-      const desiredSig = signatureOf(state);
+    async function apiPOST_bestEffort(payload){
+      const desiredSig = signatureOf(payload);
       const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(settings.key);
+      const body = JSON.stringify(payload);
 
-      // 1) tentativa normal (pode falhar por CORS)
-      try{
-        await fetch(url, { method:"POST", body: JSON.stringify(state) });
-
-        // Confirma por GET (garante que leitores vão ver)
-        const remote = await apiGET();
-        const sigR = signatureOf(remote);
-        if(sigR !== desiredSig){
-          throw new Error("Não confirmou salvamento. Verifique KEY/Deploy do Apps Script.");
+      async function confirmSaved(){
+        // Apps Script pode demorar um pouco para refletir o POST no GET
+        const waits = [600, 900, 1400];
+        for(const w of waits){
+          await new Promise(res=>setTimeout(res, w));
+          const remote = await apiGET();
+          const sigR = signatureOf(remote);
+          if(sigR === desiredSig) return true;
         }
-        return true;
-      }catch(e){
-        // 2) fallback no-cors + confirmação por GET
-        await fetch(url, { method:"POST", mode:"no-cors", body: JSON.stringify(state) });
-        await new Promise(res=>setTimeout(res, 1200));
-
-        const remote = await apiGET();
-        const sigR = signatureOf(remote);
-        if(sigR !== desiredSig){
-          throw new Error("Não salvou no online. Verifique KEY/Deploy do Apps Script.");
-        }
-        return true;
+        throw new Error("Não confirmou salvamento.");
       }
+
+      // Tentativas com backoff (rede/limite/cors)
+      const backoff = [0, 900, 1800];
+      let lastErr = null;
+
+      for(let attempt=0; attempt<backoff.length; attempt++){
+        if(backoff[attempt]) await new Promise(r=>setTimeout(r, backoff[attempt]));
+
+        // 1) tentativa normal (com JSON)
+        try{
+          await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body
+          });
+          await confirmSaved();
+          return true;
+        }catch(e){
+          lastErr = e;
+        }
+
+        // 2) fallback no-cors + confirmação por GET
+        try{
+          await fetch(url, { method:"POST", mode:"no-cors", body });
+          await confirmSaved();
+          return true;
+        }catch(e){
+          lastErr = e;
+        }
+      }
+
+      throw (lastErr || new Error("Falha ao salvar"));
     }
 
 
@@ -1425,27 +1484,64 @@
 
     }
 
-    function scheduleSave(){
+    function scheduleSave(opts){
+      // opts: { immediate?: boolean, skipTouch?: boolean }
       if(!canEdit()) return;
-      dirty = true;
+      opts = opts || {};
+
+      if(!opts.skipTouch){
+        dirty = true;
+        changeRev++;
+        persistDraft();
+      }
+
       clearTimeout(saveTimer);
+      const delay = opts.immediate ? 80 : 650;
       saveTimer = setTimeout(async ()=>{
+        // Evita corridas: 1 save por vez
+        if(saveInFlight){ pendingSave = true; return; }
+        if(!canEdit()) return;
+
+        saveInFlight = true;
+        pendingSave = false;
+
+        const revToSave = changeRev;
+        const snapshot = safeClone(state);
+
         try{
-          syncing=true; setModeUI();
-          await apiPOST_bestEffort();
-          syncing=false; dirty=false;
-          // confirm by GET to make sure readers will see
-          const remote = await apiGET();
-          lastSig = signatureOf(remote);
-          state = remote;
-          setModeUI();
-          renderAll();
-          toast("Salvo no online.");
+          syncing = true; setModeUI();
+          await apiPOST_bestEffort(snapshot);
+
+          savedRev = Math.max(savedRev, revToSave);
+          lastSig = signatureOf(snapshot); // remoto deve refletir isso
+
+          // Se não houve novas edições durante o save, podemos limpar o dirty
+          if(savedRev === changeRev){
+            dirty = false;
+            clearDraft();
+            toast("Salvo no online.");
+          }else{
+            // Houve novas mudanças enquanto salvava → mantém dirty e agenda novo save
+            dirty = true;
+            scheduleSave({ immediate:true, skipTouch:true });
+          }
+
         }catch(e){
-          syncing=false; setModeUI();
-          toast("Erro ao salvar. (Não apagou seus dados.) Verifique Apps Script/KEY/Deploy.");
+          // NÃO sobrescreve state com remoto (evita perda de dados)
+          dirty = true;
+          toast("Falha ao salvar no online. Seus dados ficaram guardados neste navegador (rascunho). Tente novamente.");
+        }finally{
+          syncing = false;
+          saveInFlight = false;
+          setModeUI();
+
+          // Se alguém editou durante o save, agenda mais um
+          if(pendingSave){
+            pendingSave = false;
+            scheduleSave({ immediate:true, skipTouch:true });
+          }
         }
-      }, 650);
+      }, delay);
     }
 
     async function poll(){
@@ -2379,6 +2475,7 @@ function computeTotals(date,bucket){
 
     $("#btnAdd").addEventListener("click", ()=>openBm(null));
     $("#btnRefresh").addEventListener("click", async ()=>{
+      if(dirty){ toast("Você tem alterações pendentes. Salve antes de recarregar."); return; }
       try{
         const remote = await apiGET();
         state = remote;
@@ -2391,7 +2488,8 @@ function computeTotals(date,bucket){
     });
     $("#btnSave").addEventListener("click", async ()=>{
       if(!canEdit()) return toast("Leitura. Abra o link de edição.");
-      scheduleSave();
+      scheduleSave({ immediate:true, skipTouch:true });
+      toast("Salvando…");
     });
 
     $("#search").addEventListener("input", renderBoard);
@@ -2434,6 +2532,27 @@ function computeTotals(date,bucket){
       try{
         state = await apiGET();
         lastSig = signatureOf(state);
+
+        // Se existir rascunho local diferente do online, ofereça recuperação
+        const d = readDraft();
+        if(d && d.state){
+          try{
+            const sigD = signatureOf(d.state);
+            const sigR = signatureOf(state);
+            if(sigD !== sigR){
+              const ok = confirm(
+  "Encontramos um rascunho local (alterações não salvas) neste navegador.\n\n" +
+  "Deseja RECUPERAR o rascunho local?\n" +
+  "(Se escolher Cancelar, manteremos o online.)"
+);
+if(ok){
+                state = d.state;
+                dirty = true;
+                changeRev++;
+              }
+            }
+          }catch(e){}
+        }
         renderAll();
         setTab("agenda");
         // Polling para leitores verem atualizações
@@ -2443,6 +2562,12 @@ function computeTotals(date,bucket){
         setInterval(supportPoll, 15000);
       }catch(e){
         toast("Falha ao carregar do online. Verifique o Deploy do Apps Script.");
+        const d = readDraft();
+        if(d && d.state){
+          state = d.state;
+          dirty = true;
+          toast("Carreguei um rascunho local deste navegador. Clique em Salvar quando a rede voltar.");
+        }
         renderAll();
         setTab("agenda");
       }
