@@ -298,7 +298,34 @@
   }
   .bm-details > summary::-webkit-details-marker{ display:none; }
 
-</style>
+
+  /* Dashboard bars */
+  .barlist{ display:flex; flex-direction:column; gap:10px; }
+  .barrow{ display:grid; grid-template-columns: 160px 1fr 120px; gap:12px; align-items:center; }
+  .barlabel{ font-weight:800; }
+  .barmeta{ text-align:right; font-variant-numeric: tabular-nums; }
+  .bartrack{ height:12px; border-radius:999px; background: rgba(255,255,255,.08); overflow:hidden; border:1px solid rgba(255,255,255,.10); }
+  .barfill{ height:100%; border-radius:999px; background: linear-gradient(90deg, rgba(79,156,255,.75), rgba(79,156,255,.18)); }
+  .kpiRow{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .kpiBox{ padding:10px 12px; border-radius:14px; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+  .kpiBox .t{ font-size:12px; opacity:.78; }
+  .kpiBox .v{ font-size:18px; font-weight:900; margin-top:4px; }
+
+
+  /* Dashboard drilldown */
+  .metaInput{width:110px; padding:8px 10px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.25); color:var(--text); outline:none; }
+  .metaTag{ font-weight:800; }
+  .metaSmall{ font-size:12px; opacity:.78; }
+  .rowCompact{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+  .barrow{ cursor:pointer; }
+  .barrow:hover{ background: rgba(255,255,255,.03); border-radius:14px; padding:6px 8px; margin:-6px -8px; }
+
+    /* Dashboard detalhe: lista curta + expandir */
+    .dashDetailScroll{max-height:260px; overflow:auto;}
+    #dashDetailToggle{margin-top:10px;}
+
+  </style>
 </head>
 <body>
   <div class="app">
@@ -320,6 +347,7 @@
           <button class="tab" id="tabBoard">BMs</button>
           <button class="tab admin" id="tabProg">Programação</button>
           <button class="tab admin" id="tabSupport">Suportes <span class="badge" id="supportBadge" style="display:none">0</span></button>
+          <button class="tab" id="tabDash">DASHBOARD</button>
         
         </div>
 
@@ -351,6 +379,9 @@
                   <option value="GBR_NOVO">GBR NOVO</option>
                   <option value="3P_CLT">3P CLT</option>
                   <option value="3PORT">3PORT</option>
+                  <option value="M2_PORT">M2 PORT</option>
+                  <option value="2A_PORT">2A PORT</option>
+                  <option value="VMC_PORT">VMC PORT</option>
                   <option value="SEM">Sem empresa</option>
                 </select>
               </div>
@@ -365,6 +396,148 @@
       </div>
 
       <!-- AGENDA -->
+      <!-- DASHBOARD -->
+      <div id="viewDash" style="display:none">
+        <div class="panel" style="margin-bottom:12px">
+          <div class="controls" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <div class="controls" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+              <div class="pill"><span>📅 De</span><input id="dashFrom" type="date" style="min-width:140px"></div>
+              <div class="pill"><span>Até</span><input id="dashTo" type="date" style="min-width:140px"></div>
+              <div class="pill"><span>🔽</span>
+                <select id="dashQuick" style="border:0;outline:0;background:transparent;color:var(--text)">
+                  <option value="7">Próximos 7 dias</option>
+                  <option value="today">Hoje</option>
+                  <option value="all">Tudo</option>
+                </select>
+              </div>
+              <div class="pill"><span>🏢</span>
+                <select id="dashEmpresa" style="border:0;outline:0;background:transparent;color:var(--text)">
+                  <option value="ALL">Todas empresas</option>
+                  <option value="GBR_CLT">GBR CLT</option>
+                  <option value="GBR">GBR</option>
+                  <option value="3P_CLT">3P CLT</option>
+                  <option value="3P_PORT">3P PORT</option>
+                  <option value="M2_PORT">M2 PORT</option>
+                  <option value="2A_PORT">2A PORT</option>
+                  <option value="VMC_PORT">VMC PORT</option>
+                </select>
+              </div>
+              <div class="pill"><span>📌</span>
+                <select id="dashProduto" style="border:0;outline:0;background:transparent;color:var(--text)">
+                  <option value="ALL">Todos produtos</option>
+                  <option value="CLT">CLT</option>
+                  <option value="NOVO">NOVO</option>
+                  <option value="PORT">PORT</option>
+                </select>
+              </div>
+              <button class="btn" id="dashCopyDay" title="Copia um resumo do dia selecionado">Copiar resumo</button>
+              <button class="btn" id="dashApply">Recalcular</button>
+            </div>
+            <div class="controls" style="justify-content:flex-end;gap:8px;flex-wrap:wrap">
+              <span class="chip"><strong id="dashTotalQty">0</strong> disparos</span>
+              <span class="chip"><strong id="dashTotalLines">0</strong> linhas</span>
+            </div>
+          </div>
+          <div class="muted" style="margin-top:8px">Fonte: Programação (4 dígitos + quantidade + horário). Use os filtros acima para ver por empresa e por data.</div>
+        </div>
+
+        <div class="panel" style="margin-top:12px">
+          <div class="controls" style="justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+            <div>
+              <h3 style="margin:0">Tendência (últimos 7 dias)</h3>
+              <div class="muted" style="margin-top:6px">Linha do total diário + Top 2 empresas do período selecionado.</div>
+            </div>
+            <div class="controls" style="justify-content:flex-end;gap:8px;flex-wrap:wrap">
+              <span class="chip"><strong id="dashTrendSum">0</strong> disparos (7d)</span>
+              <span class="chip"><strong id="dashTrendLeader">—</strong></span>
+            </div>
+          </div>
+          <div class="hr" style="margin-top:12px"></div>
+          <canvas id="dashTrendCanvas" height="120" style="width:100%;display:block"></canvas>
+          <div class="muted" id="dashTrendHint" style="margin-top:10px"></div>
+        </div>
+
+
+
+        <div class="panel" style="margin-top:12px">
+          <div class="controls" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <div>
+              <h3 style="margin:0">Comparativo do dia</h3>
+              <div class="muted" style="margin-top:6px">Comparação entre empresas no mesmo dia (quantidade e participação).</div>
+            </div>
+            <div class="controls" style="justify-content:flex-end;gap:10px;flex-wrap:wrap">
+              <div class="pill"><span>📅 Dia</span>
+                <select id="dashDay" style="border:0;outline:0;background:transparent;color:var(--text);min-width:160px">
+                  <option value="">—</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpiRow" style="margin-top:12px">
+            <div class="kpiBox"><div class="t">Total no dia</div><div class="v" id="dashDayTotal">—</div></div>
+            <div class="kpiBox"><div class="t">Líder do dia</div><div class="v" id="dashDayLeader">—</div></div>
+            <div class="kpiBox"><div class="t">Dif. Top 1 vs Top 2</div><div class="v" id="dashDayGap">—</div></div>
+            <div class="kpiBox"><div class="t">Vs dia anterior</div><div class="v" id="dashDayVsPrev">—</div></div>
+            <div class="kpiBox"><div class="t">Semana (5d) vs anterior</div><div class="v" id="dashWeekVsPrev">—</div></div>
+          </div>
+
+          <div class="hr" style="margin-top:12px"></div>
+          <div id="dashDayBars" class="barlist"></div>
+          <div class="muted" id="dashDayHint" style="margin-top:10px"></div>
+        </div>
+
+
+
+        <div class="panel" style="margin-top:12px">
+          <div class="controls" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <div>
+              <h3 style="margin:0">Meta do dia</h3>
+              <div class="muted" style="margin-top:6px">Realizado vs meta (por empresa) no dia selecionado.</div>
+            </div>
+            <div class="controls" style="justify-content:flex-end;gap:8px;flex-wrap:wrap">
+              <button class="btn" id="dashMetaSave" style="display:none">Salvar metas</button>
+            </div>
+          </div>
+          <div class="hr" style="margin-top:12px"></div>
+          <div id="dashMetaRows"></div>
+          <div class="muted" id="dashMetaHint" style="margin-top:10px"></div>
+        </div>
+
+        <div class="panel" style="margin-top:12px">
+          <div class="controls" style="justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+            <div>
+              <h3 style="margin:0">Semana (últimos 5 dias)</h3>
+              <div class="muted" style="margin-top:6px">Totais por empresa nos últimos 5 dias (até o dia selecionado).</div>
+            </div>
+          </div>
+          <div class="hr" style="margin-top:12px"></div>
+          <div id="dashWeek5"></div>
+        </div>
+
+        <div class="grid2">
+          <div class="panel">
+            <h3>Envios por empresa</h3>
+            <div class="muted">Linhas e totais de disparos no período.</div>
+            <div class="hr"></div>
+            <div id="dashByEmpresa"></div>
+          </div>
+          <div class="panel">
+            <h3>Envios por data</h3>
+            <div class="muted">Resumo diário (total + empresas com volume).</div>
+            <div class="hr"></div>
+            <div id="dashByDate"></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:12px">
+          <h3>BMs criadas (visão rápida)</h3>
+          <div class="muted">Conta pelo dia de criação da BM (independente da programação).</div>
+          <div class="hr"></div>
+          <div id="dashBms"></div>
+        </div>
+      </div>
+
       <div id="viewAgenda">
         
         <div class="panel" style="margin-bottom:12px">
@@ -391,6 +564,9 @@
             <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="GBR" checked style="accent-color:var(--accent)"> GBR</label>
             <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="3P_CLT" checked style="accent-color:var(--accent)"> 3P CLT</label>
             <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="3P_PORT" checked style="accent-color:var(--accent)"> 3P PORT</label>
+            <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="M2_PORT" checked style="accent-color:var(--accent)"> M2 PORT</label>
+            <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="2A_PORT" checked style="accent-color:var(--accent)"> 2A PORT</label>
+            <label class="pill" style="cursor:pointer"><input type="checkbox" class="bucket" value="VMC_PORT" checked style="accent-color:var(--accent)"> VMC PORT</label>
           </div>
         </div>
 <div class="grid2">
@@ -448,6 +624,9 @@
                 <option value="GBR">GBR NOVO</option>
                 <option value="3P_CLT">3P CLT</option>
                 <option value="3P_PORT">3P PORT</option>
+                <option value="M2_PORT">M2 PORT</option>
+                <option value="2A_PORT">2A PORT</option>
+                <option value="VMC_PORT">VMC PORT</option>
               </select>
             </div>
             <div class="field">
@@ -481,6 +660,9 @@
                   <option value="GBR">GBR NOVO</option>
                   <option value="3P_CLT">3P CLT</option>
                   <option value="3P_PORT">3P PORT</option>
+                  <option value="M2_PORT">M2 PORT</option>
+                  <option value="2A_PORT">2A PORT</option>
+                  <option value="VMC_PORT">VMC PORT</option>
                 </select>
               </div>
 
@@ -514,6 +696,9 @@
                     <option value="GBR_NOVO">GBR NOVO</option>
                     <option value="3P_CLT">3P CLT</option>
                     <option value="3PORT">3PORT</option>
+                    <option value="M2_PORT">M2 PORT</option>
+                    <option value="2A_PORT">2A PORT</option>
+                    <option value="VMC_PORT">VMC PORT</option>
                   </select>
                 </div>
                 <button class="btn" id="btnAddLine" disabled>＋ Linha</button>
@@ -575,6 +760,9 @@
               <option value="GBR_NOVO">GBR NOVO</option>
               <option value="3P_CLT">3P CLT</option>
               <option value="3PORT">3PORT</option>
+              <option value="M2_PORT">M2 PORT</option>
+              <option value="2A_PORT">2A PORT</option>
+              <option value="VMC_PORT">VMC PORT</option>
             </select>
           </div>
 
@@ -630,6 +818,9 @@
               <option value="GBR_NOVO">GBR NOVO</option>
               <option value="3P_CLT">3P CLT</option>
               <option value="3PORT">3PORT</option>
+              <option value="M2_PORT">M2 PORT</option>
+              <option value="2A_PORT">2A PORT</option>
+              <option value="VMC_PORT">VMC PORT</option>
             </select>
           </div>
 
@@ -765,6 +956,9 @@
             <option value="GBR_NOVO">GBR NOVO</option>
             <option value="3P_CLT">3P CLT</option>
             <option value="3PORT">3PORT</option>
+            <option value="M2_PORT">M2 PORT</option>
+            <option value="2A_PORT">2A PORT</option>
+            <option value="VMC_PORT">VMC PORT</option>
           </select>
         </div>
         <div class="field">
@@ -815,7 +1009,10 @@
       {id:"GBR_CLT",label:"GBR CLT"},
       {id:"GBR",label:"GBR"},
       {id:"3P_CLT",label:"3P CLT"},
-      {id:"3P_PORT",label:"3P PORT"}
+      {id:"3P_PORT",label:"3P PORT"},
+      {id:"M2_PORT",label:"M2 PORT"},
+      {id:"2A_PORT",label:"2A PORT"},
+      {id:"VMC_PORT",label:"VMC PORT"}
     ];
 
     function normalizeBucket(raw){
@@ -828,7 +1025,22 @@
       if(b === "GBR_CLT") return "GBR_CLT";
       if(b === "GBR") return "GBR";
       if(b === "3P") return "3P_CLT";
+      if(b === "M2" || b === "M2 PORT" || b === "M2_PORT") return "M2_PORT";
+      if(b === "2A" || b === "2A PORT" || b === "2A_PORT") return "2A_PORT";
+      if(b === "VMC" || b === "VMC PORT" || b === "VMC_PORT") return "VMC_PORT";
+      if(b === "M2_PORT") return "M2_PORT";
+      if(b === "2A_PORT") return "2A_PORT";
+      if(b === "VMC_PORT") return "VMC_PORT";
       return "GBR";
+    }
+
+    function bucketProduct(bucket){
+      const b = String(bucket||"").toUpperCase();
+      if(b.endsWith("_CLT")) return "CLT";
+      if(b.endsWith("_PORT")) return "PORT";
+      if(b === "GBR") return "NOVO";
+      if(b.endsWith("_NOVO")) return "NOVO";
+      return "OUTRO";
     }
 
     function getSelectedBuckets(){
@@ -871,7 +1083,7 @@
 
     const bucketLabel = (id)=> (BUCKETS.find(b=>b.id===id)?.label || id);
 
-    let state = { items: [], dispatches: [] };
+    let state = { items: [], dispatches: [], metas: {} };
     let settings = { edit:false, key:"", editor:"", supkey:"" };
     let syncing=false, dirty=false, lastSig="";
     let saveTimer=null;
@@ -883,7 +1095,231 @@
     const nowISO=()=>{ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
     const toBR=(iso)=>{ if(!iso) return "—"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; };
     const uid=()=> (crypto?.randomUUID?.() || ("id-"+Math.random().toString(16).slice(2)+"-"+Date.now()));
-    const escapeHtml=(s)=>String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    const escapeHtml=(s)=>String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll("\"","&quot;").replaceAll("'","&#039;");
+
+    async function copyToClipboard(text){
+      const t = String(text ?? "").trim();
+      if(!t){ toast("Nada para copiar"); return false; }
+      try{
+        // Clipboard API only works in secure contexts (HTTPS/localhost)
+        if(navigator.clipboard && window.isSecureContext){
+          await navigator.clipboard.writeText(t);
+          toast("Resumo copiado ✅");
+          return true;
+        }
+        throw new Error("Clipboard API indisponível");
+      }catch(e){
+        // Fallback (execCommand)
+        try{
+          const ta = document.createElement("textarea");
+          ta.value = t;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          ta.style.top = "0";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.focus({preventScroll:true});
+          ta.select();
+          ta.setSelectionRange(0, ta.value.length);
+          let ok = false;
+          try{ ok = document.execCommand("copy"); }catch(err){ ok = false; }
+          document.body.removeChild(ta);
+          toast(ok ? "Resumo copiado ✅" : "Não foi possível copiar");
+          return ok;
+        }catch(err){
+          toast("Não foi possível copiar");
+          return false;
+        }
+      }
+    }
+
+
+    // Dashboard: tiny canvas trend + drilldown modal
+    const drawTrendCanvas = (canvas, labels, series) => {
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(260, canvas.clientWidth || canvas.parentElement?.clientWidth || 600);
+      const h0 = Number(canvas.getAttribute('height') || 120);
+
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h0 * dpr);
+      canvas.style.width = w + 'px';
+      canvas.style.height = h0 + 'px';
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+
+      ctx.clearRect(0,0,w,h0);
+
+      if(!labels || labels.length===0 || !series || series.length===0){
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = 'rgba(255,255,255,.75)';
+        ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.fillText('Sem dados no período.', 12, 18);
+        ctx.globalAlpha = 1;
+        return;
+      }
+
+      let maxV = 0;
+      for(const s of series){
+        for(const v of (s.values||[])) maxV = Math.max(maxV, Number(v||0));
+      }
+      maxV = Math.max(1, maxV);
+
+      const padL = 36, padR = 10, padT = 10, padB = 22;
+      const iw = w - padL - padR;
+      const ih = h0 - padT - padB;
+
+      // grid
+      ctx.globalAlpha = 0.22;
+      ctx.strokeStyle = 'rgba(255,255,255,.35)';
+      ctx.lineWidth = 1;
+      for(let k=0;k<=4;k++){
+        const y = padT + (ih*k/4);
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(padL+iw, y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // y labels
+      ctx.fillStyle = 'rgba(255,255,255,.75)';
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.fillText(String(maxV), 6, padT+12);
+      ctx.fillText('0', 10, padT+ih);
+
+      const n = labels.length;
+      const xAt = (i)=> padL + (n===1 ? 0 : (iw * i/(n-1)));
+      const yAt = (v)=> padT + ih - (ih * (Number(v||0)/maxV));
+
+      series.forEach((s, idx)=>{
+        const hue = (idx*70) % 360;
+        const stroke = `hsl(${hue} 90% 70%)`;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        (s.values||[]).forEach((v,i)=>{
+          const x = xAt(i), y = yAt(v);
+          if(i===0) ctx.moveTo(x,y);
+          else ctx.lineTo(x,y);
+        });
+        ctx.stroke();
+
+        ctx.fillStyle = stroke;
+        (s.values||[]).forEach((v,i)=>{
+          const x=xAt(i), y=yAt(v);
+          ctx.beginPath();
+          ctx.arc(x,y,2.2,0,Math.PI*2);
+          ctx.fill();
+        });
+      });
+
+      // x labels (first/last)
+      ctx.fillStyle = 'rgba(255,255,255,.7)';
+      const first = labels[0], last = labels[labels.length-1];
+      ctx.fillText(toBR(first), padL, h0-6);
+      const tw = ctx.measureText(toBR(last)).width;
+      ctx.fillText(toBR(last), padL+iw-tw, h0-6);
+    };
+
+    const openDashDetail = (day, bucket) => {
+      const backdrop = document.getElementById("dashDetailBackdrop");
+      const title = document.getElementById("dashDetailTitle");
+      const sub = document.getElementById("dashDetailSub");
+      const tbody = document.querySelector("#dashDetailTable tbody");
+      const totalEl = document.getElementById("dashDetailTotal");
+      const numsEl = document.getElementById("dashDetailNums");
+      const winEl = document.getElementById("dashDetailWin");
+      const hint = document.getElementById("dashDetailHint");
+      const closeBtn = document.getElementById("dashDetailClose");
+
+      if(!backdrop || !tbody) return;
+
+      const close = () => {
+        backdrop.style.display = "none";
+        backdrop.classList.remove("open");
+      };
+
+      // Ensure close always works (even if init missed)
+      if(closeBtn) closeBtn.onclick = close;
+      backdrop.onclick = (e)=>{ if(e.target === backdrop) close(); };
+      document.onkeydown = (e)=>{ if(e.key === "Escape") close(); };
+
+      const list = listDispatches(day, bucket).slice().sort((a,b)=> String(a.time||"").localeCompare(String(b.time||"")));
+      const bucketId = normalizeBucket(bucket);
+
+      if(title) title.textContent = `Detalhes • ${bucketLabel(bucketId)}`;
+      if(sub) sub.textContent = `Dia ${toBR(String(day).slice(0,10))} • ${list.length} linhas`;      tbody.innerHTML = "";
+
+      const toggleBtn = document.getElementById("dashDetailToggle");
+      const LIMIT = 12;
+
+      if(list.length === 0){
+        tbody.innerHTML = `<tr><td colspan="3" class="muted">Sem linhas encontradas para este dia/empresa.</td></tr>`;
+        if(totalEl) totalEl.textContent = "—";
+        if(numsEl) numsEl.textContent = "—";
+        if(winEl) winEl.textContent = "—";
+        if(hint) hint.textContent = "Dica: confira se a programação foi salva no bucket correto e depois clique em Atualizar no Dashboard.";
+        if(toggleBtn){ toggleBtn.style.display = "none"; toggleBtn.onclick = null; }
+      }else{
+        // KPIs calculados no conjunto completo (mesmo quando a lista está resumida)
+        let total = 0;
+        const nums = new Set();
+        let minT = "", maxT = "";
+
+        for(const r of list){
+          total += Number(r.qty||0) || 0;
+          const last4 = (r.last4 || "").toString();
+          if(last4) nums.add(last4);
+          if(r.time){
+            if(!minT || r.time < minT) minT = r.time;
+            if(!maxT || r.time > maxT) maxT = r.time;
+          }
+        }
+
+        if(totalEl) totalEl.textContent = String(total);
+        if(numsEl) numsEl.textContent = String(nums.size);
+        if(winEl) winEl.textContent = (minT && maxT) ? `${minT}–${maxT}` : "—";
+
+        let expanded = false;
+        const renderRows = () => {
+          tbody.innerHTML = "";
+          const slice = expanded ? list : list.slice(0, LIMIT);
+          for(const r of slice){
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td class="mono">${escapeHtml(r.time||"—")}</td><td class="mono">${escapeHtml((r.last4||"").toString()||"—")}</td><td><b>${Number(r.qty||0)||0}</b></td>`;
+            tbody.appendChild(tr);
+          }
+        };
+
+        // button expand/collapse
+        if(toggleBtn && list.length > LIMIT){
+          toggleBtn.style.display = "inline-flex";
+          const updateBtn = () => {
+            toggleBtn.textContent = expanded ? "Ver menos" : `Ver mais (${list.length - LIMIT})`;
+          };
+          toggleBtn.onclick = () => {
+            expanded = !expanded;
+            renderRows();
+            updateBtn();
+          };
+          updateBtn();
+        }else if(toggleBtn){
+          toggleBtn.style.display = "none";
+          toggleBtn.onclick = null;
+        }
+
+        renderRows();
+        if(hint) hint.textContent = list.length > LIMIT ? `Mostrando ${Math.min(LIMIT, list.length)} de ${list.length} linhas. Use “Ver mais” para expandir.` : "Você pode fechar clicando em 'Fechar', clicando fora do modal, ou pressionando ESC.";
+      }
+
+      backdrop.style.display = "grid";
+      backdrop.classList.add("open");
+    };
+
 
     function parseHash(){
       const h=(location.hash||"").replace(/^#/,"");
@@ -910,6 +1346,7 @@
           d.id||"", d.date||"", d.bucket||"", d.operator||"",
           d.code||"", Number(d.qty||0), d.time||""
         ]),
+        metas: Object.entries(st.metas||{}).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([k,v])=>[k, Number(v||0)]),
         supportCfg: ((st.supportConfig && Array.isArray(st.supportConfig.responsaveis)) ? st.supportConfig.responsaveis : [])
       });
       let h=0; for(let k=0;k<str.length;k++) h=(h*31+str.charCodeAt(k))>>>0;
@@ -1231,9 +1668,28 @@ $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent =
     // ---------- PROGRAMAÇÃO ----------
     function getProgDate(){ return $("#progDate").value || todayISO(); }
     function getProgBucket(){ return $("#progBucket").value || "GBR_CLT"; }
-    function listDispatches(date,bucket){ return (state.dispatches||[]).filter(d=>d.date===date && (d.bucket||"GBR_CLT")===bucket); }
+    function listDispatches(date,bucket){
+      const dt = String(date||"").slice(0,10);
+      const b  = normalizeBucket(bucket);
+      const out = [];
+      const arr = Array.isArray(state.dispatches) ? state.dispatches : [];
+      for(const d of arr){
+        const dd = String(d.date||"").slice(0,10);
+        const bb = normalizeBucket(d.bucket||"");
+        if(dd !== dt) continue;
+        if(bb !== b) continue;
 
-    function computeTotals(date,bucket){
+        // normalize shape
+        const code = (d.code!=null ? String(d.code) : (d.num!=null ? String(d.num) : "")).trim();
+        const last4 = (d.last4!=null ? String(d.last4) : code.slice(-4));
+        const qty = Number(d.qty ?? d.qtd ?? d.count ?? 0) || 0;
+        const time = (d.time!=null ? String(d.time) : "");
+        const operator = (d.operator!=null ? String(d.operator) : "");
+        out.push({ ...d, code, last4, qty, time, operator, bucket: bb, date: dd });
+      }
+      return out;
+    }
+function computeTotals(date,bucket){
       const list = listDispatches(date,bucket);
       const qty = list.reduce((a,x)=>a+(Number(x.qty)||0),0);
       $("#totals").innerHTML = `<strong>${list.length}</strong> linhas • <strong>${qty}</strong> disparos`;
@@ -1446,6 +1902,371 @@ $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent =
       $("#agendaCount").textContent = String(itemCount);
     }
 
+
+
+    // ---------- DASHBOARD ----------
+    function dashApplyQuick(){
+      const v = document.getElementById("dashQuick")?.value || "7";
+      const today = todayISO();
+      if(v === "today"){
+        document.getElementById("dashFrom").value = today;
+        document.getElementById("dashTo").value = today;
+      }else if(v === "7"){
+        document.getElementById("dashFrom").value = today;
+        document.getElementById("dashTo").value = addDays(today, 7);
+      }else{
+        document.getElementById("dashFrom").value = "";
+        document.getElementById("dashTo").value = "";
+      }
+    }
+
+    function dashInRange(dateIso){
+      const from = document.getElementById("dashFrom")?.value || "";
+      const to = document.getElementById("dashTo")?.value || "";
+      if(from && dateIso < from) return false;
+      if(to && dateIso > to) return false;
+      return true;
+    }
+
+    function renderDashboard(){
+      const fromEl = document.getElementById("dashFrom");
+      const toEl = document.getElementById("dashTo");
+      const qEl = document.getElementById("dashQuick");
+      const empEl = document.getElementById("dashEmpresa");
+      const prodEl = document.getElementById("dashProduto");
+      if(!fromEl || !toEl || !qEl || !empEl) return;
+
+      const produtoSel = (prodEl ? (prodEl.value || "ALL") : "ALL");
+
+      // defaults on first open
+      if(!fromEl.value && !toEl.value && (qEl.value || "") === "7"){
+        dashApplyQuick();
+      }
+
+      const empresaSel = empEl.value || "ALL";
+
+      const byEmp = new Map();
+      const byDate = new Map();
+
+      let totalQty = 0;
+      let totalLines = 0;
+
+      for(const d of (state.dispatches || [])){
+        if(!d.date) continue;
+        const date = String(d.date);
+        if(!dashInRange(date)) continue;
+        const b = normalizeBucket(d.bucket);
+        if(empresaSel !== "ALL" && b !== empresaSel) continue;
+        if(produtoSel !== "ALL" && bucketProduct(b) !== produtoSel) continue;
+
+        const qty = Number(d.qty||0);
+        const time = String(d.time||"").trim();
+
+        totalQty += qty;
+        totalLines += 1;
+
+        // by empresa
+        if(!byEmp.has(b)) byEmp.set(b, { bucket:b, lines:0, qty:0, dates:new Set(), minTime:"", maxTime:"" });
+        const e = byEmp.get(b);
+        e.lines += 1;
+        e.qty += qty;
+        e.dates.add(date);
+        if(time){
+          if(!e.minTime || time < e.minTime) e.minTime = time;
+          if(!e.maxTime || time > e.maxTime) e.maxTime = time;
+        }
+
+        // by date
+        if(!byDate.has(date)) byDate.set(date, { date, lines:0, qty:0, buckets:new Map() });
+        const dd = byDate.get(date);
+        dd.lines += 1;
+        dd.qty += qty;
+        dd.buckets.set(b, (dd.buckets.get(b) || 0) + qty);
+      }
+
+      document.getElementById("dashTotalQty").textContent = String(totalQty);
+      document.getElementById("dashTotalLines").textContent = String(totalLines);
+
+      // Tendência (últimos 7 dias): total diário + Top 2 empresas
+      const trendCanvas = document.getElementById('dashTrendCanvas');
+      const trendSumEl = document.getElementById('dashTrendSum');
+      const trendLeaderEl = document.getElementById('dashTrendLeader');
+      const trendHint = document.getElementById('dashTrendHint');
+
+      if(trendCanvas){
+        const daysAll = Array.from(byDate.values()).map(r=>r.date).sort((a,b)=>String(a).localeCompare(String(b)));
+        const last7 = daysAll.slice(Math.max(0, daysAll.length-7));
+        const totalSeries = { name:'Total', values: last7.map(d=>byDate.get(d)?.qty||0) };
+
+        // Top 2 empresas no período filtrado
+        const totalsByBucket = new Map();
+        for(const r of byDate.values()){
+          for(const [b,q] of r.buckets.entries()){
+            totalsByBucket.set(b, (totalsByBucket.get(b)||0) + Number(q||0));
+          }
+        }
+        const topBuckets = Array.from(totalsByBucket.entries()).sort((a,b)=>b[1]-a[1]).slice(0,2).map(x=>x[0]);
+        const bucketSeries = topBuckets.map(b=>({ name: bucketLabel(b), values: last7.map(d=> (byDate.get(d)?.buckets.get(b) || 0)) }));
+
+        const series = [totalSeries, ...bucketSeries];
+        drawTrendCanvas(trendCanvas, last7, series);
+
+        const sum7 = totalSeries.values.reduce((a,b)=>a+Number(b||0),0);
+        if(trendSumEl) trendSumEl.textContent = String(sum7);
+
+        if(trendLeaderEl){
+          if(topBuckets.length){
+            const b0 = topBuckets[0];
+            const v0 = totalsByBucket.get(b0) || 0;
+            trendLeaderEl.textContent = `Top: ${bucketLabel(b0)} (${v0})`;
+          }else trendLeaderEl.textContent = '—';
+        }
+
+        if(trendHint){
+          if(last7.length){
+            const first=last7[0], last=last7[last7.length-1];
+            trendHint.textContent = `Janela: ${toBR(first)} → ${toBR(last)} • Linhas: Total + Top 2 empresas do período.`;
+          }else trendHint.textContent = 'Sem datas para montar a tendência.';
+        }
+      }
+
+
+      // Envios por empresa
+      const empWrap = document.getElementById("dashByEmpresa");
+      if(empWrap){
+        const rows = Array.from(byEmp.values()).sort((a,b)=>bucketLabel(a.bucket).localeCompare(bucketLabel(b.bucket)));
+        if(rows.length === 0){
+          empWrap.innerHTML = '<div class="muted">Sem envios no período.</div>';
+        }else{
+          empWrap.innerHTML = `
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Empresa</th>
+                  <th style="width:90px">Dias</th>
+                  <th style="width:90px">Linhas</th>
+                  <th style="width:110px">Disparos</th>
+                  <th style="width:120px">% do período</th>
+                  <th style="width:140px">Janela</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(r=>{
+                  const days = r.dates.size;
+                  const win = (r.minTime && r.maxTime) ? (r.minTime + '–' + r.maxTime) : '—';
+                  return `
+                    <tr>
+                      <td><b>${escapeHtml(bucketLabel(r.bucket))}</b></td>
+                      <td>${days}</td>
+                      <td>${r.lines}</td>
+                      <td><b>${r.qty}</b></td>
+                      <td>${totalQty? ((r.qty/totalQty)*100).toFixed(1) : "0.0"}%</td>
+                      <td class="mono">${escapeHtml(win)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          `;
+        }
+      }
+
+      // Envios por data
+      const dateWrap = document.getElementById("dashByDate");
+      if(dateWrap){
+        const rows = Array.from(byDate.values()).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+        if(rows.length === 0){
+          dateWrap.innerHTML = '<div class="muted">Sem datas no período.</div>';
+        }else{
+          dateWrap.innerHTML = `
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width:120px">Data</th>
+                  <th style="width:90px">Linhas</th>
+                  <th style="width:110px">Disparos</th>
+                  <th>Empresas</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(r=>{
+                  const chips = Array.from(r.buckets.entries())
+                    .sort((a,b)=>bucketLabel(a[0]).localeCompare(bucketLabel(b[0])))
+                    .map(([b,t])=>`<span class="chip"><strong>${escapeHtml(bucketLabel(b))}:</strong> ${t}</span>`)
+                    .join(' ');
+                  return `
+                    <tr>
+                      <td><b>${escapeHtml(toBR(r.date))}</b></td>
+                      <td>${r.lines}</td>
+                      <td><b>${r.qty}</b></td>
+                      <td>${chips}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          `;
+        }
+      }
+
+      // BMs criadas (visão rápida)
+      const bmsWrap = document.getElementById("dashBms");
+      if(bmsWrap){
+        const from = document.getElementById("dashFrom")?.value || "";
+        const to = document.getElementById("dashTo")?.value || "";
+        const map = new Map();
+        for(const it of (state.items || [])){
+          const created = String(it.createdAt||"");
+          if(!created) continue;
+          if(from && created < from) continue;
+          if(to && created > to) continue;
+          const emp = normalizeEmpresa(it.empresa || "");
+          const key = emp || "SEM";
+          map.set(key, (map.get(key) || 0) + 1);
+        }
+        const rows = Array.from(map.entries()).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+        if(rows.length === 0){
+          bmsWrap.innerHTML = '<div class="muted">Sem BMs criadas no período.</div>';
+        }else{
+          bmsWrap.innerHTML = `
+            <div class="controls" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+              ${rows.map(([k,v])=>{
+                const label = k === "SEM" ? "Sem empresa" : empresaLabel(k);
+                return `<span class="chip"><strong>${escapeHtml(label)}:</strong> ${v}</span>`;
+              }).join('')}
+            </div>
+          `;
+        }
+      }
+    
+
+      // Comparativo do dia (gráfico simples) + comparativos
+      const daySel = document.getElementById('dashDay');
+      const barsWrap = document.getElementById('dashDayBars');
+      const dayTotalEl = document.getElementById('dashDayTotal');
+      const dayLeaderEl = document.getElementById('dashDayLeader');
+      const dayGapEl = document.getElementById('dashDayGap');
+      const dayHintEl = document.getElementById('dashDayHint');
+      const dayVsPrevEl = document.getElementById('dashDayVsPrev');
+      const weekVsPrevEl = document.getElementById('dashWeekVsPrev');
+
+      if(daySel && barsWrap){
+        daySel.onchange = () => renderDashboard();
+        const days = Array.from(byDate.values()).map(r=>r.date).sort((a,b)=>String(a).localeCompare(String(b)));
+        const prev = daySel.value || '';
+        daySel.innerHTML = days.map(d=>`<option value='${escapeHtml(d)}'>${escapeHtml(toBR(d))}</option>`).join('');
+        if(prev && days.includes(prev)) daySel.value = prev;
+        else daySel.value = (days[days.length-1] || '');
+
+        const selDay = daySel.value;
+        const row = byDate.get(selDay);
+        const entries = row ? Array.from(row.buckets.entries()) : [];
+        entries.sort((a,b)=>Number(b[1])-Number(a[1]));
+
+        const sum = entries.reduce((acc, it)=>acc + Number(it[1]||0), 0);
+        const max = entries.length ? Number(entries[0][1]||0) : 0;
+
+        // KPIs do dia
+        if(dayTotalEl) dayTotalEl.textContent = sum ? String(sum) : '—';
+        if(dayLeaderEl) dayLeaderEl.textContent = entries.length ? `${bucketLabel(entries[0][0])} (${entries[0][1]})` : '—';
+        if(dayGapEl){
+          if(entries.length >= 2){
+            const gap = Number(entries[0][1]) - Number(entries[1][1]);
+            const pct = entries[1][1] ? ((gap/Number(entries[1][1]))*100).toFixed(1) : '0.0';
+            dayGapEl.textContent = `${gap} (${pct}%)`;
+          }else{
+            dayGapEl.textContent = '—';
+          }
+        }
+
+        // Vs dia anterior
+        if(dayVsPrevEl){
+          const idx = days.indexOf(selDay);
+          if(idx > 0){
+            const prevDay = days[idx-1];
+            const prevRow = byDate.get(prevDay);
+            const prevSum = prevRow ? prevRow.qty : 0;
+            const delta = sum - prevSum;
+            const pct = prevSum ? ((delta/prevSum)*100).toFixed(1) : '0.0';
+            const sign = delta>0 ? '+' : '';
+            dayVsPrevEl.textContent = `${sign}${delta} (${sign}${pct}%)`;
+          }else{
+            dayVsPrevEl.textContent = '—';
+          }
+        }
+
+        // Semana (5d) vs semana anterior (base no dia selecionado)
+        if(weekVsPrevEl){
+          const idx = days.indexOf(selDay);
+          if(idx >= 0){
+            const curStart = Math.max(0, idx-4);
+            const curDays = days.slice(curStart, idx+1);
+            const prevDays = days.slice(Math.max(0, curStart-5), curStart);
+            const sumCur = curDays.reduce((a,d)=>a+(byDate.get(d)?.qty||0),0);
+            const sumPrev = prevDays.reduce((a,d)=>a+(byDate.get(d)?.qty||0),0);
+            const delta = sumCur - sumPrev;
+            const pct = sumPrev ? ((delta/sumPrev)*100).toFixed(1) : '0.0';
+            const sign = delta>0 ? '+' : '';
+            weekVsPrevEl.textContent = prevDays.length ? `${sign}${delta} (${sign}${pct}%)` : '—';
+          }else weekVsPrevEl.textContent = '—';
+        }
+
+        // Bars + drilldown
+        if(entries.length === 0){
+          barsWrap.innerHTML = '<div class="muted">Sem dados no dia selecionado.</div>';
+          if(dayHintEl) dayHintEl.textContent = '';
+        }else{
+          barsWrap.innerHTML = entries.map(([b,qty])=>{
+            const q = Number(qty||0);
+            const w = max ? Math.max(3, Math.round((q/max)*100)) : 0;
+            const share = sum ? ((q/sum)*100).toFixed(1) : '0.0';
+            return `
+              <div class='barrow' data-dd-bucket='${escapeHtml(b)}'>
+                <div class='barlabel'>${escapeHtml(bucketLabel(b))}</div>
+                <div class='bartrack'><div class='barfill' style='width:${w}%'></div></div>
+                <div class='barmeta'><b>${q}</b> <span class='muted'>(${share}%)</span></div>
+              </div>
+            `;
+          }).join('');
+
+          barsWrap.querySelectorAll('[data-dd-bucket]').forEach(el=>{
+            el.addEventListener('click', ()=>{
+              const b = el.getAttribute('data-dd-bucket');
+              if(b) openDashDetail(selDay, b);
+            });
+          });
+
+          if(dayHintEl){
+            const top = entries[0];
+            const topShare = sum ? ((Number(top[1])/sum)*100).toFixed(1) : '0.0';
+            dayHintEl.textContent = `Dia ${toBR(selDay)} • Clique em uma empresa para ver horários, números e quantidades. • Líder: ${bucketLabel(top[0])} com ${top[1]} (${topShare}%).`;
+          }
+        }
+      }
+
+
+
+      // Copiar resumo do dia (somente por empresa)
+      const copyBtn = document.getElementById("dashCopyDay");
+      if(copyBtn){
+        copyBtn.onclick = async () => {
+          const daySelEl = document.getElementById("dashDay");
+          const selDay = (daySelEl && daySelEl.value) ? String(daySelEl.value).slice(0,10) : "";
+          if(!selDay) return toast("Selecione um dia no Dashboard");
+          const row = byDate.get(selDay);
+          if(!row) return toast("Sem dados para o dia selecionado");
+
+          const lines = Array.from(row.buckets.entries())
+            .sort((a,b)=>Number(b[1])-Number(a[1]))
+            .map(([b,q]) => `${bucketLabel(b)}: ${Number(q||0)}`);
+
+          const text = `Resumo ${toBR(selDay)}\n` + lines.join("\n");
+          await copyToClipboard(text);
+        };
+      }
+
+    }
+
     function renderAgendaBms(){
       const wrap=$("#agendaBms");
       const items=(state.items||[]).filter(i=>i.disparoDate || i.disparoWeekday);
@@ -1476,13 +2297,15 @@ $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent =
     let currentTab = "agenda";
     function setTab(which){
       currentTab = which;
-      const isBoard=which==="board", isAgenda=which==="agenda", isRod=which==="rodizio", isProg=which==="prog", isSupport=which==="support";
+      const isDash=which==="dash", isBoard=which==="board", isAgenda=which==="agenda", isRod=which==="rodizio", isProg=which==="prog", isSupport=which==="support";
+      $("#tabDash").classList.toggle("active", isDash);
       $("#tabBoard").classList.toggle("active", isBoard);
       $("#tabAgenda").classList.toggle("active", isAgenda);
       $("#tabRodizio").classList.toggle("active", isRod);
       $("#tabProg").classList.toggle("active", isProg);
       $("#tabSupport").classList.toggle("active", isSupport);
 
+      $("#viewDash").style.display = isDash ? "block" : "none";
       $("#viewBoard").style.display = isBoard ? "block" : "none";
       $("#viewAgenda").style.display = isAgenda ? "block" : "none";
       $("#viewRodizio").style.display = isRod ? "block" : "none";
@@ -1491,9 +2314,11 @@ $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent =
 
       if(isSupport) renderSupportTab();
       if(isRod) renderRodizio();
+      if(isDash) renderDashboard();
     }
 
 
+    $("#tabDash").addEventListener("click", ()=>setTab("dash"));
     $("#tabBoard").addEventListener("click", ()=>setTab("board"));
     $("#tabAgenda").addEventListener("click", ()=>setTab("agenda"));
     $("#tabRodizio").addEventListener("click", ()=>setTab("rodizio"));
@@ -1509,6 +2334,26 @@ $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent =
     if(_rodDate) _rodDate.addEventListener('change', renderRodizio);
     const _rodClear = document.getElementById('rodClearFilters');
     if(_rodClear) _rodClear.addEventListener('click', ()=>{ if(_rodEmp) _rodEmp.value='ALL'; if(_rodDate) _rodDate.value=''; renderRodizio(); });
+    // Dashboard listeners
+    const _dashApply = document.getElementById('dashApply');
+    if(_dashApply) _dashApply.addEventListener('click', renderDashboard);
+    const _dashQuick = document.getElementById('dashQuick');
+    if(_dashQuick) _dashQuick.addEventListener('change', ()=>{ dashApplyQuick(); renderDashboard(); });
+    const _dashEmp = document.getElementById('dashEmpresa');
+    if(_dashEmp) _dashEmp.addEventListener('change', renderDashboard);
+    const _dashProd = document.getElementById('dashProduto');
+    if(_dashProd) _dashProd.addEventListener('change', renderDashboard);
+    const _dashMetaSave = document.getElementById('dashMetaSave');
+    if(_dashMetaSave) _dashMetaSave.addEventListener('click', ()=>{
+      if(!canEdit()) return toast("Leitura. Abra o link de edição.");
+      scheduleSave();
+      toast("Salvando metas...");
+    });
+    const _dClose = document.getElementById('dashDetailClose');
+    const _dBack = document.getElementById('dashDetailBackdrop');
+    if(_dClose && _dBack) _dClose.addEventListener('click', ()=> _dBack.style.display='none');
+    if(_dBack) _dBack.addEventListener('click', (e)=>{ if(e.target===_dBack) _dBack.style.display='none'; });
+
 
     $("#tabProg").addEventListener("click", ()=>setTab("prog"));
       $("#tabSupport").addEventListener("click", ()=>setTab("support"));
@@ -1617,6 +2462,12 @@ $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent =
       if(e === "GBR_CLT") return "GBR_CLT";
       if(e === "GBR_NOVO") return "GBR_NOVO";
       if(e === "3P_CLT") return "3P_CLT";
+      if(e === "M2" || e === "M2 PORT" || e === "M2_PORT") return "M2_PORT";
+      if(e === "2A" || e === "2A PORT" || e === "2A_PORT") return "2A_PORT";
+      if(e === "VMC" || e === "VMC PORT" || e === "VMC_PORT") return "VMC_PORT";
+      if(e === "M2_PORT") return "M2_PORT";
+      if(e === "2A_PORT") return "2A_PORT";
+      if(e === "VMC_PORT") return "VMC_PORT";
       return "";
     }
     function empresaLabel(id){
@@ -1625,6 +2476,9 @@ $("#fNumbers").addEventListener("input", ()=>{ $("#fNumbersCount").textContent =
       if(e === "GBR_NOVO") return "GBR NOVO";
       if(e === "3P_CLT") return "3P CLT";
       if(e === "3PORT") return "3PORT";
+      if(e === "M2_PORT") return "M2 PORT";
+      if(e === "2A_PORT") return "2A PORT";
+      if(e === "VMC_PORT") return "VMC PORT";
       return e || "—";
     }
     function matchesEmpresa(it){
@@ -2187,5 +3041,44 @@ const id = btn.getAttribute('data-support-toggle');
     }
     init();
   </script>
+
+
+  <!-- DASHBOARD DETAIL MODAL -->
+  <div class="backdrop" id="dashDetailBackdrop" style="display:none">
+    <div class="modal" style="max-width:760px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0" id="dashDetailTitle">Detalhes</h3>
+          <div class="muted" style="margin-top:6px" id="dashDetailSub">—</div>
+        </div>
+        <div class="controls" style="justify-content:flex-end">
+          <button class="btn" id="dashDetailClose">Fechar</button>
+        </div>
+      </div>
+      <div class="hr" style="margin-top:12px"></div>
+      <div class="kpiRow" style="margin-top:12px">
+        <div class="kpiBox"><div class="t">Total</div><div class="v" id="dashDetailTotal">—</div></div>
+        <div class="kpiBox"><div class="t">Números</div><div class="v" id="dashDetailNums">—</div></div>
+        <div class="kpiBox"><div class="t">Janela</div><div class="v" id="dashDetailWin">—</div></div>
+      </div>
+      <div class="dashDetailScroll" style="margin-top:12px">
+        <table class="table" id="dashDetailTable">
+          <thead>
+            <tr>
+              <th style="width:120px">Horário</th>
+              <th style="width:140px">Número</th>
+              <th style="width:120px">Qtd</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="controls" style="justify-content:flex-end">
+        <button class="btn" id="dashDetailToggle" style="display:none">Ver mais</button>
+      </div>
+      <div class="muted" style="margin-top:10px" id="dashDetailHint"></div>
+    </div>
+  </div>
+
 </body>
 </html>
