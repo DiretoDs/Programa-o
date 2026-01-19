@@ -1146,6 +1146,98 @@
       try{ localStorage.removeItem(draftKey()); }catch(e){}
     }
 
+    // --- Cache local ultra-rápido (IndexedDB) ---
+    const CACHE_DB = 'execCacheDB';
+    const CACHE_STORE = 'states';
+    let __idb = null;
+
+    function cacheKeyOnline(){
+      // cache por chave de edição (se existir), para separar ambientes
+      return 'online:' + String(settings.key||'public');
+    }
+
+    function _idbOpen(){
+      return new Promise((resolve, reject)=>{
+        if(!('indexedDB' in window)) return reject(new Error('indexedDB indisponível'));
+        const req = indexedDB.open(CACHE_DB, 1);
+        req.onupgradeneeded = ()=>{
+          const db = req.result;
+          if(!db.objectStoreNames.contains(CACHE_STORE)) db.createObjectStore(CACHE_STORE);
+        };
+        req.onsuccess = ()=> resolve(req.result);
+        req.onerror = ()=> reject(req.error || new Error('Falha ao abrir IndexedDB'));
+      });
+    }
+
+    async function idb(){
+      if(__idb) return __idb;
+      __idb = await _idbOpen();
+      return __idb;
+    }
+
+    async function cacheGet(k){
+      // IndexedDB (preferido)
+      try{
+        const db = await idb();
+        return await new Promise((resolve, reject)=>{
+          const tx = db.transaction(CACHE_STORE, 'readonly');
+          const st = tx.objectStore(CACHE_STORE);
+          const r = st.get(k);
+          r.onsuccess = ()=> resolve(r.result || null);
+          r.onerror = ()=> reject(r.error);
+        });
+      }catch(e){
+        // Fallback: localStorage (pode ser limitado)
+        try{
+          const raw = localStorage.getItem('execCache:' + k);
+          return raw ? JSON.parse(raw) : null;
+        }catch(_){
+          return null;
+        }
+      }
+    }
+
+    async function cacheSet(k, v){
+      try{
+        const db = await idb();
+        await new Promise((resolve, reject)=>{
+          const tx = db.transaction(CACHE_STORE, 'readwrite');
+          tx.objectStore(CACHE_STORE).put(v, k);
+          tx.oncomplete = ()=> resolve();
+          tx.onerror = ()=> reject(tx.error);
+          tx.onabort = ()=> reject(tx.error);
+        });
+      }catch(e){
+        try{
+          localStorage.setItem('execCache:' + k, JSON.stringify(v));
+        }catch(_){ }
+      }
+    }
+
+    function cacheSetSoon(){
+      // grava em idle para não travar a UI
+      const key = cacheKeyOnline();
+      const payload = { ts: Date.now(), state: state, sig: lastSig || '' };
+      const doWrite = ()=> cacheSet(key, payload).catch(()=>{});
+      if('requestIdleCallback' in window) requestIdleCallback(doWrite, { timeout: 1200 });
+      else setTimeout(doWrite, 0);
+    }
+
+    // --- Performance helpers ---
+    function debounce(fn, wait){
+      let t=null;
+      return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), wait); };
+    }
+
+    // Evita travar a UI salvando rascunho a cada clique (JSON grande no localStorage)
+    let draftTimer = null;
+    function persistDraftSoon(){
+      if(!settings.key) return;
+      clearTimeout(draftTimer);
+      draftTimer = setTimeout(()=>{ try{ persistDraft(); }catch(_){} }, 700);
+    }
+
+
     const $ = (s)=>document.querySelector(s);
     const toast = (m)=>{ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(window.__tt); window.__tt=setTimeout(()=>t.classList.remove("show"), 2600); };
     const pad2=(n)=>String(n).padStart(2,"0");
@@ -1528,74 +1620,129 @@
     function isSupervisor(){ return canEdit() && !!(settings.supkey||"").trim(); }
 
     function signatureOf(st){
-      const items = (st.items||[]).slice().sort((a,b)=>String(a.id||"").localeCompare(String(b.id||"")));
-      const dispatches = (st.dispatches||[]).slice().sort((a,b)=>String(a.id||"").localeCompare(String(b.id||"")));
-      const str = JSON.stringify({
-        items: items.map(i=>[
-          i.id||"", i.bmId||"", i.empresa||"",
-          i.column||"", i.quality||"", i.createdAt||"",
-          i.disparoDate||"", i.disparoWeekday||"",
-          (i.numbers||[]).join(","), (i.notes||"")
-        ]),
-        dispatches: dispatches.map(d=>[
-          d.id||"", d.date||"", d.bucket||"", d.operator||"",
-          d.code||"", Number(d.qty||0), d.time||""
-        ]),
-        metas: Object.entries(st.metas||{}).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([k,v])=>[k, Number(v||0)]),
-        supportCfg: ((st.supportConfig && Array.isArray(st.supportConfig.responsaveis)) ? st.supportConfig.responsaveis : [])
-      });
-      let h=0; for(let k=0;k<str.length;k++) h=(h*31+str.charCodeAt(k))>>>0;
+      // Prefer rev-based signature (very fast)
+      if(st && st._rev){
+        return 'rev:' + String(st._rev);
+      }
+
+      // Fallback: streaming hash (no sort, no giant JSON string)
+      let h = 2166136261; // FNV-1a 32-bit
+      const add = (v)=>{
+        const s = (v==null ? '' : String(v));
+        for(let i=0;i<s.length;i++){
+          h ^= s.charCodeAt(i);
+          h = Math.imul(h, 16777619) >>> 0;
+        }
+      };
+
+      const items = Array.isArray(st?.items) ? st.items : [];
+      const dispatches = Array.isArray(st?.dispatches) ? st.dispatches : [];
+      add('i'+items.length);
+      add('d'+dispatches.length);
+
+      // Mix a few stable-ish fields; order changes will also change signature (OK for polling)
+      for(let i=0;i<items.length;i++){
+        const it = items[i] || {};
+        add(it.id); add(it.column); add(it.empresa); add(it.quality);
+        add(it.updatedAt); add(it.createdAt);
+        add((it.notes||'').length);
+      }
+      for(let i=0;i<dispatches.length;i++){
+        const d = dispatches[i] || {};
+        add(d.id); add(d.date); add(d.bucket);
+        add(d.time); add(d.operator);
+        add(d.code||d.num);
+        add(d.qty||d.qtd||d.count||0);
+      }
+
+      // metas and support config lengths
+      const metas = st?.metas || {};
+      add('m'+Object.keys(metas).length);
+      try{
+        for(const k of Object.keys(metas).sort()){
+          add(k); add(metas[k]);
+        }
+      }catch(_){ }
+
+      const resp = (st?.supportConfig && Array.isArray(st.supportConfig.responsaveis)) ? st.supportConfig.responsaveis : [];
+      add('r'+resp.length);
+      for(const n of resp){ add(n); }
+
       return String(h);
     }
 
     async function apiGET(){
-      const r = await fetch(API_URL, { cache:"no-store" });
-      const j = await r.json();
-      if(!j || !Array.isArray(j.items)) throw new Error("API inválida");
-      if(!Array.isArray(j.dispatches)) j.dispatches = [];
-      return j;
+      // Timeout para não travar a UI com rede ruim
+      const ctrl = new AbortController();
+      const t = setTimeout(()=>ctrl.abort(), 12000);
+      try{
+        const r = await fetch(API_URL, { cache:"no-store", signal: ctrl.signal });
+        const j = await r.json();
+        if(!j || !Array.isArray(j.items)) throw new Error("API inválida");
+        if(!Array.isArray(j.dispatches)) j.dispatches = [];
+        // assinatura rápida (usa _rev se existir)
+        try{
+          const sig = signatureOf(j);
+          // cache local (stale-while-revalidate)
+          const payload = { ts: Date.now(), state: j, sig };
+          const key = cacheKeyOnline();
+          if('requestIdleCallback' in window) requestIdleCallback(()=>cacheSet(key, payload).catch(()=>{}), {timeout: 1200});
+          else setTimeout(()=>cacheSet(key, payload).catch(()=>{}), 0);
+        }catch(_){ }
+        return j;
+      } finally {
+        clearTimeout(t);
+      }
     }
 
     async function apiPOST_bestEffort(payload){
+      // Envia como text/plain (evita preflight e costuma ser mais rápido no Apps Script)
       const desiredSig = signatureOf(payload);
       const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(settings.key);
       const body = JSON.stringify(payload);
+      const desiredRev = (payload && payload._rev) ? String(payload._rev) : '';
 
       async function confirmSaved(){
-        // Apps Script pode demorar um pouco para refletir o POST no GET
-        const waits = [600, 900, 1400];
+        // Confirmação mais rápida (sem esperar 3s sempre)
+        const waits = [220, 450, 900, 1500];
         for(const w of waits){
           await new Promise(res=>setTimeout(res, w));
           const remote = await apiGET();
+          if(desiredRev && String(remote._rev||'') === desiredRev) return true;
           const sigR = signatureOf(remote);
           if(sigR === desiredSig) return true;
         }
-        throw new Error("Não confirmou salvamento.");
+        throw new Error('Não confirmou salvamento.');
       }
 
-      // Tentativas com backoff (rede/limite/cors)
-      const backoff = [0, 900, 1800];
+      const backoff = [0, 650, 1200];
       let lastErr = null;
 
       for(let attempt=0; attempt<backoff.length; attempt++){
         if(backoff[attempt]) await new Promise(r=>setTimeout(r, backoff[attempt]));
 
-        // 1) tentativa normal (com JSON)
+        // 1) no-cors (muito rápido) + confirmação por GET
         try{
-          await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body
-          });
+          await fetch(url, { method:"POST", mode:"no-cors", body, keepalive:true });
           await confirmSaved();
           return true;
         }catch(e){
           lastErr = e;
         }
 
-        // 2) fallback no-cors + confirmação por GET
+        // 2) tentativa cors text/plain (se o deploy permitir)
         try{
-          await fetch(url, { method:"POST", mode:"no-cors", body });
+          const ctrl = new AbortController();
+          const t = setTimeout(()=>ctrl.abort(), 15000);
+          try{
+            await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body,
+              signal: ctrl.signal,
+              keepalive: true
+            });
+          } finally { clearTimeout(t); }
           await confirmSaved();
           return true;
         }catch(e){
@@ -1603,8 +1750,11 @@
         }
       }
 
-      throw (lastErr || new Error("Falha ao salvar"));
+      throw (lastErr || new Error('Falha ao salvar'));
     }
+
+
+    function setModeUI()
 
 
     function setModeUI(){
@@ -1641,6 +1791,18 @@
 
     }
 
+    function stripForSave(st){
+      // reduz payload (e evita salvar campos transitórios/caches)
+      const out = {
+        items: Array.isArray(st?.items) ? st.items : [],
+        dispatches: Array.isArray(st?.dispatches) ? st.dispatches : [],
+        metas: st?.metas || {},
+        supportConfig: st?.supportConfig || {}
+      };
+      if(st && st._rev) out._rev = st._rev;
+      return out;
+    }
+
     function scheduleSave(opts){
       // opts: { immediate?: boolean, skipTouch?: boolean }
       if(!canEdit()) return;
@@ -1649,7 +1811,7 @@
       if(!opts.skipTouch){
         dirty = true;
         changeRev++;
-        persistDraft();
+        persistDraftSoon();
       }
 
       clearTimeout(saveTimer);
@@ -1663,7 +1825,10 @@
         pendingSave = false;
 
         const revToSave = changeRev;
-        const snapshot = safeClone(state);
+        const snapshot = safeClone(stripForSave(state));
+
+        // Fast change signature for online sync
+        snapshot._rev = Date.now();
 
         try{
           syncing = true; setModeUI();
@@ -1671,6 +1836,8 @@
 
           savedRev = Math.max(savedRev, revToSave);
           lastSig = signatureOf(snapshot); // remoto deve refletir isso
+          try{ state._rev = snapshot._rev; }catch(_){ }
+          try{ cacheSetSoon(); }catch(_){ }
 
           // Se não houve novas edições durante o save, podemos limpar o dirty
           if(savedRev === changeRev){
@@ -1702,17 +1869,21 @@
     }
 
     async function poll(){
+      // Evita concorrência e evita travar quando a aba está oculta
+      if(document.hidden) return;
+      if(syncing || dirty) return;
+      if(window.__pollInFlight) return;
+      window.__pollInFlight = true;
       try{
-        if(syncing || dirty) return;
         const remote = await apiGET();
         const sig = signatureOf(remote);
         if(!lastSig) lastSig = sig;
         if(sig !== lastSig){
           state = remote;
-          lastSig = sig;
-          renderAll();
+          renderCurrentTab();
         }
       }catch(e){}
+      finally{ window.__pollInFlight = false; }
     }
 
     // ---------- BOARD ----------
@@ -1764,6 +1935,7 @@
           const card=document.createElement("div");
           card.className = "card" + (canEdit()?"":" readonly");
           card.draggable = canEdit();
+          card.setAttribute('data-id', it.id);
           card.innerHTML = `
             <div class="card-top">
               <div style="min-width:0">
@@ -1781,15 +1953,7 @@
               </div>
               ${!isSupervisor() ? `<div class="muted" style="margin-top:8px">Obs: apenas <b>supervisores</b> podem definir Responsável/Prioridade.</div>` : ``}
             </div>
-          `;
-          if(canEdit()){
-            card.addEventListener("dragstart", e=>{
-              e.dataTransfer.setData("text/plain", it.id);
-              e.dataTransfer.effectAllowed="move";
-            });
-          }
-          card.querySelector("[data-edit]").addEventListener("click", ()=>openBm(it.id));
-          dz.appendChild(card);
+          `;          dz.appendChild(card);
         }
         board.appendChild(colEl);
       }
@@ -2565,9 +2729,25 @@ function computeTotals(date,bucket){
       $("#viewProg").style.display = isProg ? "block" : "none";
       $("#viewSupport").style.display = isSupport ? "block" : "none";
 
+      // Render sob demanda (melhora muito a velocidade inicial)
+      if(isAgenda){
+        renderAgendaProg();
+        renderAgendaBms();
+      }
+      if(isBoard){
+        // evita travar o clique
+        if('requestIdleCallback' in window) requestIdleCallback(()=>renderBoard(), {timeout: 800});
+        else setTimeout(renderBoard, 0);
+      }
+      if(isProg){
+        if('requestIdleCallback' in window) requestIdleCallback(()=>renderProg(), {timeout: 800});
+        else setTimeout(renderProg, 0);
+      }
       if(isSupport) renderSupportTab();
       if(isRod) renderRodizio();
       if(isDash) renderDashboard();
+
+      setModeUI();
     }
 
 
@@ -2649,9 +2829,34 @@ function computeTotals(date,bucket){
       toast("Salvando…");
     });
 
-    $("#search").addEventListener("input", renderBoard);
+    $("#search").addEventListener("input", debounce(renderBoard, 140));
       const empFilter = document.getElementById("bmEmpresaFilter");
       if(empFilter) empFilter.addEventListener("change", renderBoard);
+
+    // Board: event delegation (mais rápido que 1 listener por card)
+    const _boardEl = document.getElementById('board');
+    if(_boardEl && !_boardEl.__delegated){
+      _boardEl.__delegated = true;
+      _boardEl.addEventListener('click', (e)=>{
+        const btn = e.target.closest('[data-edit]');
+        if(btn){
+          const id = btn.getAttribute('data-edit');
+          if(id) openBm(id);
+        }
+      });
+      _boardEl.addEventListener('dragstart', (e)=>{
+        if(!canEdit()) return;
+        const card = e.target.closest('.card');
+        if(!card) return;
+        const id = card.getAttribute('data-id');
+        if(!id) return;
+        try{
+          e.dataTransfer.setData('text/plain', id);
+          e.dataTransfer.effectAllowed = 'move';
+        }catch(_){ }
+      });
+    }
+
     $("#progDate").addEventListener("change", renderProg);
     $("#progBucket").addEventListener("change", renderProg);
     $("#btnAddLine").addEventListener("click", addLine);
@@ -2665,16 +2870,30 @@ function computeTotals(date,bucket){
     });
 
     function renderAll(){
-      renderBoard();
-      renderProg();
-      renderAgendaProg();
-      renderAgendaBms();
+      // Mantido para botões de recarregar; usa render atual + agenda
+      renderCurrentTab();
+      if(currentTab === 'agenda'){ renderAgendaProg(); renderAgendaBms(); }
       setModeUI();
     }
+
+    function renderCurrentTab(){
+      // Atualiza somente o que está na tela (menos travamento)
+      setModeUI();
+      if(currentTab === 'board') return renderBoard();
+      if(currentTab === 'dash') return renderDashboard();
+      if(currentTab === 'agenda') { renderAgendaProg(); return renderAgendaBms(); }
+      if(currentTab === 'rodizio') return renderRodizio();
+      if(currentTab === 'prog') return renderProg();
+      if(currentTab === 'support') return renderSupportTab();
+      // fallback
+      renderBoard();
+    }
+
 
     async function init(){
       parseHash();
       $("#progDate").value = todayISO();
+
       // Agenda filter defaults
       if($("#fQuick")){
         $("#fQuick").value = "7";
@@ -2685,49 +2904,94 @@ function computeTotals(date,bucket){
         document.querySelectorAll("input.bucket").forEach(cb=>cb.addEventListener("change", ()=>{ renderAgendaProg(); renderAgendaBms(); }));
       }
 
+      // 1) Render instantâneo via rascunho local (se existir)
       setModeUI();
+      let renderedOnce = false
+      
       try{
-        state = await apiGET();
-        lastSig = signatureOf(state);
-
-        // Se existir rascunho local diferente do online, ofereça recuperação
-        const d = readDraft();
-        if(d && d.state){
-          try{
-            const sigD = signatureOf(d.state);
-            const sigR = signatureOf(state);
-            if(sigD !== sigR){
-              const ok = confirm(
-  "Encontramos um rascunho local (alterações não salvas) neste navegador.\n\n" +
-  "Deseja RECUPERAR o rascunho local?\n" +
-  "(Se escolher Cancelar, manteremos o online.)"
-);
-if(ok){
-                state = d.state;
-                dirty = true;
-                changeRev++;
-              }
-            }
-          }catch(e){}
-        }
-        renderAll();
-        setTab("agenda");
-        // Polling para leitores verem atualizações
-        setInterval(poll, 10000);
-        // Polling do suporte (somente editores)
-        supportPoll();
-        setInterval(supportPoll, 15000);
-      }catch(e){
-        toast("Falha ao carregar do online. Verifique o Deploy do Apps Script.");
         const d = readDraft();
         if(d && d.state){
           state = d.state;
           dirty = true;
-          toast("Carreguei um rascunho local deste navegador. Clique em Salvar quando a rede voltar.");
+          changeRev++;
+          lastSig = signatureOf(state);
+          setTab("agenda");
+          toast("Rascunho local carregado. Sincronizando…");
+          renderedOnce = true;
         }
-        renderAll();
-        setTab("agenda");
+      }catch(_){ }
+
+      // 2) Se não houver rascunho, tenta cache online (IndexedDB) para abrir instantâneo
+      if(!renderedOnce){
+        try{
+          // deixa a UI pintar antes
+          await new Promise(r=>requestAnimationFrame(r));
+          const cached = await cacheGet(cacheKeyOnline());
+          if(cached && cached.state){
+            state = cached.state;
+            lastSig = cached.sig || signatureOf(state);
+            setTab("agenda");
+            toast("Carregado do cache local. Atualizando do online…");
+            renderedOnce = true;
+          }
+        }catch(_){ }
       }
+
+      // 3) Agora busca o online em background (stale-while-revalidate)
+      const loadRemote = async ()=>{
+        try{
+          const remote = await apiGET();
+          const sigR = signatureOf(remote);
+          // Se há edição pendente, não sobrescreve
+          if(!dirty){
+            if(!lastSig || sigR !== lastSig){
+              state = remote;
+              lastSig = sigR;
+              // atualiza só a aba atual (mais rápido)
+              renderCurrentTab();
+            }
+          }
+          // grava cache
+          const payload = { ts: Date.now(), state: remote, sig: sigR };
+          const key = cacheKeyOnline();
+          if('requestIdleCallback' in window) requestIdleCallback(()=>cacheSet(key, payload).catch(()=>{}), {timeout: 1200});
+          else setTimeout(()=>cacheSet(key, payload).catch(()=>{}), 0);
+
+          if(!renderedOnce){
+            // se nada renderizou ainda (sem cache e sem draft)
+            state = remote;
+            lastSig = sigR;
+            setTab("agenda");
+            renderedOnce = true;
+          }
+
+          // Polling (leitores e editores)
+          setInterval(poll, 15000);
+          supportPoll();
+          setInterval(supportPoll, 15000);
+        }catch(e){
+          if(!renderedOnce){
+            toast("Falha ao carregar do online. Verifique o Deploy do Apps Script.");
+            // último fallback: rascunho local
+            const d = readDraft();
+            if(d && d.state){
+              state = d.state;
+              dirty = true;
+              toast("Carreguei um rascunho local deste navegador. Clique em Salvar quando a rede voltar.");
+            }
+            setTab("agenda");
+            renderedOnce = true;
+          }else{
+            toast("Online instável. Mantive o cache/local.");
+          }
+          // ainda assim inicia polling (vai tentar mais tarde)
+          setInterval(poll, 15000);
+          supportPoll();
+          setInterval(supportPoll, 15000);
+        }
+      };
+
+      loadRemote();
     }
 
 
