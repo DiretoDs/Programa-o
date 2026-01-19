@@ -2,6 +2,8 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'; base-uri 'self'" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Organizador Online — BMs + Programação</title>
   <style>
@@ -345,6 +347,18 @@
     .trendTooltip .ttRow b{font-family: var(--mono); font-size:12px}
     .trendTooltip .ttHint{margin-top:6px; color: var(--muted); font-size:11px}
 
+
+    /* Performance mode */
+    body.perf{ background: var(--bg) !important; }
+    body.perf .topbar{ backdrop-filter:none !important; }
+    body.perf .panel, body.perf .col, body.perf .card, body.perf .toast, body.perf .modal{ box-shadow:none !important; }
+    body.perf .btn, body.perf .iconbtn{ transition:none !important; }
+    body.perf .btn:hover{ transform:none !important; }
+    body.perf .dropzone.dragover{ outline-offset:2px !important; }
+    @media (prefers-reduced-motion: reduce){
+      *{ scroll-behavior:auto !important; transition:none !important; animation:none !important; }
+    }
+
   </style>
 </head>
 <body>
@@ -355,7 +369,7 @@
         <div class="title">
           <b>Organizador</b>
           <span id="subtitleReader">ONLINE • Leitura (Agenda + BMs)</span>
-          <span id="subtitleEditor" style="display:none">ONLINE • Edição via <span class="mono">#edit=1&key=...</span> • Supervisor via <span class="mono">&supkey=...</span></span>
+          <span id="subtitleEditor" style="display:none">ONLINE • Edição (chave protegida neste navegador) • Use <span class="mono">#edit=1</span> para manter o modo edição</span>
         </div>
       </div>
 
@@ -383,6 +397,8 @@
         <button class="btn primary" id="btnAdd" disabled>＋ Nova BM</button>
         <button class="btn" id="btnRefresh">Recarregar</button>
         <button class="btn primary" id="btnSave" disabled>Salvar</button>
+        <button class="btn" id="btnPerf" title="Ativa/desativa modo performance">⚡ Performance</button>
+        <button class="btn" id="btnLock" style="display:none" title="Remove a chave deste navegador e volta para leitura">🔒 Bloquear</button>
       </div>
     </div>
 
@@ -1125,8 +1141,10 @@
 
     function persistDraft(){
       if(!settings.key) return;
+      // grava somente o necessário (menor JSON = menos travada)
       try{
-        localStorage.setItem(draftKey(), JSON.stringify({ ts: Date.now(), state }));
+        const minimal = stripForSave(state);
+        localStorage.setItem(draftKey(), JSON.stringify({ ts: Date.now(), state: minimal }));
       }catch(e){}
     }
 
@@ -1137,6 +1155,10 @@
         if(!raw) return null;
         const d = JSON.parse(raw);
         if(!d || !d.state) return null;
+        // normaliza campos esperados
+        if(!Array.isArray(d.state.items)) d.state.items = [];
+        if(!Array.isArray(d.state.dispatches)) d.state.dispatches = [];
+        if(!d.state.metas) d.state.metas = {};
         return d;
       }catch(e){ return null; }
     }
@@ -1215,11 +1237,23 @@
     }
 
     function cacheSetSoon(){
-      // grava em idle para não travar a UI
+      // grava cache em idle e longe de interação do usuário (evita "tique")
       const key = cacheKeyOnline();
-      const payload = { ts: Date.now(), state: state, sig: lastSig || '' };
+      const payload = { ts: Date.now(), state: stripForSave(state), sig: lastSig || '' };
+
       const doWrite = ()=> cacheSet(key, payload).catch(()=>{});
-      if('requestIdleCallback' in window) requestIdleCallback(doWrite, { timeout: 1200 });
+
+      const since = Date.now() - (window.__lastUI || 0);
+      if(since < 1200){
+        clearTimeout(window.__cacheDelay);
+        window.__cacheDelay = setTimeout(()=>{
+          if('requestIdleCallback' in window) requestIdleCallback(doWrite, { timeout: 2000 });
+          else setTimeout(doWrite, 0);
+        }, 1200);
+        return;
+      }
+
+      if('requestIdleCallback' in window) requestIdleCallback(doWrite, { timeout: 2000 });
       else setTimeout(doWrite, 0);
     }
 
@@ -1234,11 +1268,34 @@
     function persistDraftSoon(){
       if(!settings.key) return;
       clearTimeout(draftTimer);
-      draftTimer = setTimeout(()=>{ try{ persistDraft(); }catch(_){} }, 700);
+      // espera o usuário parar de clicar/digitar e grava em idle
+      draftTimer = setTimeout(()=>{
+        const doWrite = ()=>{ try{ persistDraft(); }catch(_){} };
+        const since = Date.now() - (window.__lastUI || 0);
+        if(since < 1200){
+          clearTimeout(window.__draftDelay);
+          window.__draftDelay = setTimeout(()=>{
+            if('requestIdleCallback' in window) requestIdleCallback(doWrite, { timeout: 2500 });
+            else setTimeout(doWrite, 0);
+          }, 1200);
+          return;
+        }
+        if('requestIdleCallback' in window) requestIdleCallback(doWrite, { timeout: 2500 });
+        else setTimeout(doWrite, 0);
+      }, 900);
     }
 
 
     const $ = (s)=>document.querySelector(s);
+    // Marca a última interação do usuário (evita tarefas em idle causarem "tique")
+    window.__lastUI = Date.now();
+    (function(){
+      const evs = ['pointerdown','keydown','wheel','touchstart'];
+      for(const ev of evs){
+        window.addEventListener(ev, ()=>{ window.__lastUI = Date.now(); }, { passive:true, capture:true });
+      }
+    })();
+
     const toast = (m)=>{ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(window.__tt); window.__tt=setTimeout(()=>t.classList.remove("show"), 2600); };
     const pad2=(n)=>String(n).padStart(2,"0");
     const todayISO=()=>{ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
@@ -1611,10 +1668,40 @@
     function parseHash(){
       const h=(location.hash||"").replace(/^#/,"");
       const p=new URLSearchParams(h);
-      settings.edit = (p.get("edit")==="1");
-      settings.key = (p.get("key")||"").trim();
-      settings.editor = (p.get("editor")||"").trim();
-      settings.supkey = (p.get("supkey")||"").trim();
+
+      // carrega do hash
+      const editFlag = (p.get("edit")==="1");
+      const keyFromHash = (p.get("key")||"").trim();
+      const supFromHash = (p.get("supkey")||"").trim();
+      const editorFromHash = (p.get("editor")||"").trim();
+
+      // persiste em session (não fica na URL)
+      try{
+        if(keyFromHash) sessionStorage.setItem('exec:key', keyFromHash);
+        if(supFromHash) sessionStorage.setItem('exec:supkey', supFromHash);
+        if(editorFromHash) sessionStorage.setItem('exec:editor', editorFromHash);
+      }catch(_){ }
+
+      // usa sessionStorage como fonte (protege contra copiar/colar link)
+      let kSess = "", sSess = "", eSess = "";
+      try{
+        kSess = (sessionStorage.getItem('exec:key')||"").trim();
+        sSess = (sessionStorage.getItem('exec:supkey')||"").trim();
+        eSess = (sessionStorage.getItem('exec:editor')||"").trim();
+      }catch(_){ }
+
+      settings.edit = editFlag;
+      settings.key = (keyFromHash || kSess || "").trim();
+      settings.supkey = (supFromHash || sSess || "").trim();
+      settings.editor = (editorFromHash || eSess || "").trim();
+
+      // remove key/supkey da URL (não vaza)
+      if(p.has('key') || p.has('supkey')){
+        p.delete('key');
+        p.delete('supkey');
+        const newHash = p.toString();
+        try{ history.replaceState(null, '', '#' + newHash); }catch(_){ location.hash = newHash; }
+      }
     }
     function canEdit(){ return settings.edit && !!settings.key; }
     function isSupervisor(){ return canEdit() && !!(settings.supkey||"").trim(); }
@@ -1864,9 +1951,26 @@
       }, delay);
     }
 
-    async function poll(){
+    
+
+    // Render coalescing (evita re-render em cascata)
+    let __renderRAF = 0;
+    function scheduleRenderCurrent(){
+      if(__renderRAF) return;
+      __renderRAF = requestAnimationFrame(()=>{
+        __renderRAF = 0;
+        try{ renderCurrentTab(); }catch(_){ }
+      });
+    }
+
+async function poll(){
       // Evita concorrência e evita travar quando a aba está oculta
       if(document.hidden) return;
+      // evita "tique" durante uso
+      if(Date.now() - (window.__lastUI || 0) < 1200) return;
+      const ae = document.activeElement;
+      if(ae && ['INPUT','TEXTAREA','SELECT'].includes(ae.tagName)) return;
+
       if(syncing || dirty) return;
       if(window.__pollInFlight) return;
       window.__pollInFlight = true;
@@ -1876,7 +1980,8 @@
         if(!lastSig) lastSig = sig;
         if(sig !== lastSig){
           state = remote;
-          renderCurrentTab();
+          lastSig = sig;
+          scheduleRenderCurrent();
         }
       }catch(e){}
       finally{ window.__pollInFlight = false; }
@@ -1896,42 +2001,90 @@
       return hay.includes(s);
     }
     function renderBoard(){
-      const board=$("#board");
-      board.innerHTML="";
-      let totalVisible = 0;
-      for(const col of COLUMNS){
-        const items = (state.items||[]).filter(it=>it.column===col.id).filter(matchesEmpresa).filter(matchesSearch);
-        totalVisible += items.length;
-        const colEl=document.createElement("div");
-        colEl.className="col";
-        colEl.innerHTML = `
-          <div class="col-header">
-            <b>${col.name}</b>
-            <span class="badge">${items.length}</span>
-          </div>
-          <div class="dropzone" data-col="${col.id}"></div>
-        `;
-        const dz=colEl.querySelector(".dropzone");
-        if(canEdit()){
-          dz.addEventListener("dragover", e=>{e.preventDefault(); dz.classList.add("dragover");});
-          dz.addEventListener("dragleave", ()=>dz.classList.remove("dragover"));
-          dz.addEventListener("drop", e=>{
-            e.preventDefault(); dz.classList.remove("dragover");
-            const id = e.dataTransfer.getData("text/plain");
-            const idx = state.items.findIndex(x=>x.id===id);
-            if(idx>=0){
-              state.items[idx].column = col.id;
+      const board = $("#board");
+      if(!board) return;
+
+      // Inicializa colunas uma vez (bem mais rápido)
+      if(!board.__inited){
+        board.__inited = true;
+        board.__cols = new Map();
+        board.replaceChildren();
+
+        const frag = document.createDocumentFragment();
+        for(const col of COLUMNS){
+          const colEl = document.createElement('div');
+          colEl.className = 'col';
+          colEl.innerHTML = `
+            <div class="col-header">
+              <b>${col.name}</b>
+              <span class="badge" data-badge="${col.id}">0</span>
+            </div>
+            <div class="dropzone" data-col="${col.id}"></div>
+          `;
+          const badge = colEl.querySelector('[data-badge]');
+          const dz = colEl.querySelector('.dropzone');
+          board.__cols.set(col.id, { badge, dz });
+          frag.appendChild(colEl);
+        }
+        board.appendChild(frag);
+
+        // Drag&drop por delegação (1 listener só)
+        if(!board.__dnd){
+          board.__dnd = true;
+          board.addEventListener('dragover', (e)=>{
+            if(!canEdit()) return;
+            const dz = e.target.closest('.dropzone');
+            if(!dz || !board.contains(dz)) return;
+            e.preventDefault();
+            dz.classList.add('dragover');
+          });
+          board.addEventListener('dragleave', (e)=>{
+            if(!canEdit()) return;
+            const dz = e.target.closest('.dropzone');
+            if(!dz || !board.contains(dz)) return;
+            dz.classList.remove('dragover');
+          });
+          board.addEventListener('drop', (e)=>{
+            if(!canEdit()) return;
+            const dz = e.target.closest('.dropzone');
+            if(!dz || !board.contains(dz)) return;
+            e.preventDefault();
+            dz.classList.remove('dragover');
+            let id = '';
+            try{ id = e.dataTransfer.getData('text/plain'); }catch(_){ id=''; }
+            if(!id) return;
+            const colId = dz.getAttribute('data-col');
+            const idx = (state.items||[]).findIndex(x=>x.id===id);
+            if(idx>=0 && colId){
+              state.items[idx].column = colId;
               state.items[idx].updatedAt = nowISO();
               scheduleSave();
-              renderBoard();
+              scheduleRenderCurrent();
             }
           });
         }
+      }
+
+      let totalVisible = 0;
+
+      for(const col of COLUMNS){
+        const slot = board.__cols.get(col.id);
+        if(!slot) continue;
+        const items = (state.items||[])
+          .filter(it=>it.column===col.id)
+          .filter(matchesEmpresa)
+          .filter(matchesSearch);
+
+        totalVisible += items.length;
+        if(slot.badge) slot.badge.textContent = String(items.length);
+
+        const frag = document.createDocumentFragment();
         for(const it of items){
-          const card=document.createElement("div");
-          card.className = "card" + (canEdit()?"":" readonly");
-          card.draggable = canEdit();
+          const card = document.createElement('div');
+          card.className = 'card' + (canEdit()? '' : ' readonly');
+          card.draggable = !!canEdit();
           card.setAttribute('data-id', it.id);
+          const notes = it.notes ? escapeHtml(it.notes).slice(0,140) : 'Sem observações.';
           card.innerHTML = `
             <div class="card-top">
               <div style="min-width:0">
@@ -1942,17 +2095,19 @@
                   <span class="chip"><span class="qdot ${qdot(it.quality||"MEDIA")}" style="width:8px;height:8px;border-radius:999px;display:inline-block"></span>
                     <strong>${it.quality==="BAIXA" ? "RISCO" : qualityLabel(it.quality||"MEDIA")}</strong></span>
                 </div>
-                <div class="small" style="margin-top:8px">${it.notes ? escapeHtml(it.notes).slice(0,140) : "Sem observações."}</div>
+                <div class="small" style="margin-top:8px">${notes}</div>
               </div>
               <div class="actions">
-                <button class="iconbtn" ${canEdit()?"":"disabled"} data-edit="${it.id}">✏️</button>
+                <button class="iconbtn" ${canEdit()? "" : "disabled"} data-edit="${it.id}">✏️</button>
               </div>
               ${!isSupervisor() ? `<div class="muted" style="margin-top:8px">Obs: apenas <b>supervisores</b> podem definir Responsável/Prioridade.</div>` : ``}
             </div>
-          `;          dz.appendChild(card);
+          `;
+          frag.appendChild(card);
         }
-        board.appendChild(colEl);
+        slot.dz.replaceChildren(frag);
       }
+
       const bc = document.getElementById('bmCount');
       if(bc) bc.textContent = String(totalVisible);
     }
@@ -2888,6 +3043,7 @@ function computeTotals(date,bucket){
 
     async function init(){
       parseHash();
+      try{ wirePerfAndLock(); }catch(_){ }
       $("#progDate").value = todayISO();
 
       // Agenda filter defaults
@@ -3581,6 +3737,48 @@ const id = btn.getAttribute('data-support-toggle');
         if(dbgEl) dbgEl.textContent = 'Erro';
       }
     }
+
+    // ---- Performance + Proteção (UI) ----
+    function applyPerfMode(on){
+      try{ localStorage.setItem('exec:perf', on ? '1' : '0'); }catch(_){ }
+      document.body.classList.toggle('perf', !!on);
+    }
+
+    function loadPerfMode(){
+      let on = true;
+      try{
+        const v = localStorage.getItem('exec:perf');
+        if(v === '0') on = false;
+      }catch(_){ }
+      applyPerfMode(on);
+    }
+
+    function wirePerfAndLock(){
+      const perfBtn = document.getElementById('btnPerf');
+      const lockBtn = document.getElementById('btnLock');
+      loadPerfMode();
+
+      if(perfBtn){
+        perfBtn.addEventListener('click', ()=>{
+          const on = !document.body.classList.contains('perf');
+          applyPerfMode(on);
+          toast(on ? 'Modo performance: ON ⚡' : 'Modo performance: OFF');
+        });
+      }
+
+      if(lockBtn){
+        lockBtn.style.display = canEdit() ? 'inline-flex' : 'none';
+        lockBtn.addEventListener('click', ()=>{
+          if(!confirm('Bloquear edição neste navegador? (você volta para leitura)')) return;
+          try{ sessionStorage.removeItem('exec:key'); sessionStorage.removeItem('exec:supkey'); sessionStorage.removeItem('exec:editor'); }catch(_){ }
+          try{ localStorage.removeItem('execDraft:' + (settings.key||'')); }catch(_){ }
+          // remove hash e recarrega
+          try{ history.replaceState(null,'', location.pathname + location.search); }catch(_){ location.hash=''; }
+          location.reload();
+        });
+      }
+    }
+
     init();
   </script>
 
