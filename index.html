@@ -475,8 +475,8 @@
         <div class="logo"></div>
         <div class="title">
           <b>Organizador</b>
-          <span id="subtitleReader">ONLINE • Leitura (Agenda + Rodízio + BMs)</span>
-          <span id="subtitleEditor" style="display:none">ONLINE • Edição (chave protegida neste navegador) • Use <span class="mono">#edit=1</span> para manter o modo edição</span>
+          <span id="subtitleReader">ONLINE • Acesso por login (Leitor/Editor/Supervisor)</span>
+          <span id="subtitleEditor" style="display:none">ONLINE • Edição (controle por login)</span>
         </div>
       </div>
 
@@ -496,6 +496,12 @@
           <span class="dot" id="modeDot"></span>
           <span id="modeText">Carregando…</span>
         </div>
+
+        <div class="pill" id="userPill" title="Usuário" style="display:none">
+          👤 <span id="userLabel">—</span>
+        </div>
+        <button class="btn" id="btnLogout" style="display:none" title="Sair">Sair</button>
+        <button class="btn primary" id="btnLogin" style="display:none" title="Entrar">Entrar</button>
 
         <div class="pill">
           🔎 <input id="search" placeholder="Buscar..." />
@@ -962,7 +968,7 @@
         <div class="hr"></div>
 
         <div id="supportList" style="display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow:auto;padding-right:2px"></div>
-        <div class="muted" style="margin-top:10px">Dica: teste direto no navegador: <code>?action=inbox_list&key=...</code> e confira se há itens. Se o total for &gt; 0 e aqui não aparecer, é cache do GitHub.</div>
+        <div class="muted" style="margin-top:10px">Dica: teste direto no navegador: <code>?action=inbox_list&token=...</code> e confira se há itens. Se o total for &gt; 0 e aqui não aparecer, é cache do GitHub.</div>
       </div>
     </div>
 
@@ -1165,6 +1171,36 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- LOGIN (roles: leitor/editor/supervisor) -->
+  <div class="backdrop" id="loginBackdrop" style="display:none; z-index:9999">
+    <div class="modal" style="width:min(460px,100%)">
+      <div class="modal-header">
+        <b>Acesso</b>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Usuário</label>
+          <input class="cell" id="loginUser" placeholder="Ex: leitor01" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label>Senha</label>
+          <input class="cell" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <div class="controls" style="justify-content:flex-start">
+          <label class="muted" style="display:flex; align-items:center; gap:8px; user-select:none">
+            <input type="checkbox" id="loginRemember" /> Manter conectado neste PC
+          </label>
+        </div>
+        <div class="controls" style="justify-content:flex-start">
+          <button class="btn primary" id="loginBtn">Entrar</button>
+          <span class="muted" id="loginMsg">—</span>
+        </div>
+        <div class="muted" style="margin-top:10px">Este acesso controla permissões de <b>Leitor</b>, <b>Editor</b> e <b>Supervisor</b>.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // FIXO: todos carregam do mesmo /exec
     const API_URL = "https://script.google.com/macros/s/AKfycbxyWYuCvc5P-LL3LzKOKiyJ6DeQEijd3R23fyIgQ-Q87wf4sylrF4z5sWhfJ6qYCfKH/exec";
@@ -1285,7 +1321,8 @@
     const bucketLabel = (id)=> (BUCKETS.find(b=>b.id===id)?.label || id);
 
     let state = { items: [], dispatches: [], metas: {} };
-    let settings = { edit:false, key:"", editor:"", supkey:"" };
+    let auth = { token:"", role:"", user:"" };
+    const AUTH_STORE = "exec:auth";
     let syncing=false, dirty=false, lastSig="";
     let saveTimer=null;
 
@@ -1295,7 +1332,7 @@
     let saveInFlight=false;
     let pendingSave=false;
     const DRAFT_LS_PREFIX = "execDraft:";
-    const draftKey = ()=> (DRAFT_LS_PREFIX + (settings.key||""));
+    const draftKey = ()=> (DRAFT_LS_PREFIX + "user:" + (auth.user||"anon"));
 
     function safeClone(obj){
       try{
@@ -1305,7 +1342,7 @@
     }
 
     function persistDraft(){
-      if(!settings.key) return;
+      if(!canEdit()) return;
       // grava somente o necessário (menor JSON = menos travada)
       try{
         const minimal = stripForSave(state);
@@ -1314,7 +1351,7 @@
     }
 
     function readDraft(){
-      if(!settings.key) return null;
+      if(!canEdit()) return null;
       try{
         const raw = localStorage.getItem(draftKey());
         if(!raw) return null;
@@ -1329,7 +1366,7 @@
     }
 
     function clearDraft(){
-      if(!settings.key) return;
+      if(!canEdit()) return;
       try{ localStorage.removeItem(draftKey()); }catch(e){}
     }
 
@@ -1340,7 +1377,7 @@
 
     function cacheKeyOnline(){
       // cache por chave de edição (se existir), para separar ambientes
-      return 'online:' + String(settings.key||'public');
+      return 'online:shared';
     }
 
     function _idbOpen(){
@@ -1431,7 +1468,7 @@
     // Evita travar a UI salvando rascunho a cada clique (JSON grande no localStorage)
     let draftTimer = null;
     function persistDraftSoon(){
-      if(!settings.key) return;
+      if(!canEdit()) return;
       clearTimeout(draftTimer);
       // espera o usuário parar de clicar/digitar e grava em idle
       draftTimer = setTimeout(()=>{
@@ -1829,47 +1866,174 @@
       backdrop.classList.add("open");
     };
 
+    // ---------- Autenticação (Login + Roles) ----------
+    const ROLE_ORDER = { reader: 1, editor: 2, supervisor: 3 };
 
-    function parseHash(){
-      const h=(location.hash||"").replace(/^#/,"");
-      const p=new URLSearchParams(h);
+    function canRead(){ return !!(auth && auth.token); }
+    function canEdit(){ return auth.role === 'editor' || auth.role === 'supervisor'; }
+    function isSupervisor(){ return auth.role === 'supervisor'; }
 
-      // carrega do hash
-      const editFlag = (p.get("edit")==="1");
-      const keyFromHash = (p.get("key")||"").trim();
-      const supFromHash = (p.get("supkey")||"").trim();
-      const editorFromHash = (p.get("editor")||"").trim();
-
-      // persiste em session (não fica na URL)
+    function authLoad(){
       try{
-        if(keyFromHash) sessionStorage.setItem('exec:key', keyFromHash);
-        if(supFromHash) sessionStorage.setItem('exec:supkey', supFromHash);
-        if(editorFromHash) sessionStorage.setItem('exec:editor', editorFromHash);
+        const raw = (sessionStorage.getItem(AUTH_STORE) || localStorage.getItem(AUTH_STORE) || '').trim();
+        if(!raw) return;
+        const j = JSON.parse(raw);
+        if(j && j.token && j.role && j.user){
+          auth = { token: String(j.token), role: String(j.role), user: String(j.user) };
+        }
       }catch(_){ }
+    }
 
-      // usa sessionStorage como fonte (protege contra copiar/colar link)
-      let kSess = "", sSess = "", eSess = "";
+    function authSave(persist){
       try{
-        kSess = (sessionStorage.getItem('exec:key')||"").trim();
-        sSess = (sessionStorage.getItem('exec:supkey')||"").trim();
-        eSess = (sessionStorage.getItem('exec:editor')||"").trim();
+        const raw = JSON.stringify(auth);
+        sessionStorage.setItem(AUTH_STORE, raw);
+        if(persist) localStorage.setItem(AUTH_STORE, raw);
       }catch(_){ }
+    }
 
-      settings.edit = editFlag;
-      settings.key = (keyFromHash || kSess || "").trim();
-      settings.supkey = (supFromHash || sSess || "").trim();
-      settings.editor = (editorFromHash || eSess || "").trim();
+    function authClear(){
+      try{ sessionStorage.removeItem(AUTH_STORE); }catch(_){ }
+      try{ localStorage.removeItem(AUTH_STORE); }catch(_){ }
+      auth = { token:'', role:'', user:'' };
+    }
 
-      // remove key/supkey da URL (não vaza)
-      if(p.has('key') || p.has('supkey')){
-        p.delete('key');
-        p.delete('supkey');
-        const newHash = p.toString();
-        try{ history.replaceState(null, '', '#' + newHash); }catch(_){ location.hash = newHash; }
+    function showLogin(msg){
+      const bd = document.getElementById('loginBackdrop');
+      const m = document.getElementById('loginMsg');
+      if(m) m.textContent = msg || '—';
+      if(bd){ bd.style.display = 'grid'; bd.classList.add('open'); }
+      const u = document.getElementById('loginUser');
+      const p = document.getElementById('loginPass');
+      setTimeout(()=>{
+        try{
+          if(u && !u.value) u.focus();
+          else if(p) p.focus();
+        }catch(_){ }
+      }, 50);
+    }
+
+    function hideLogin(){
+      const bd = document.getElementById('loginBackdrop');
+      if(bd){ bd.classList.remove('open'); bd.style.display = 'none'; }
+      const m = document.getElementById('loginMsg'); if(m) m.textContent = '—';
+      const p = document.getElementById('loginPass'); if(p) p.value = '';
+    }
+
+    async function apiAuthLogin(user, pass, remember){
+      const url = API_URL + (API_URL.includes('?')?'&':'?') + 'action=auth_login';
+      const body = JSON.stringify({ user, pass });
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body
+      });
+      const j = await r.json();
+      if(!j || !j.ok) throw new Error((j && j.error) ? j.error : 'Falha no login');
+      auth = { token: String(j.token), role: String(j.role), user: String(j.user || user) };
+      authSave(!!remember);
+      return auth;
+    }
+
+    function updateUserUI(){
+      const pill = document.getElementById('userPill');
+      const lab = document.getElementById('userLabel');
+      const logout = document.getElementById('btnLogout');
+      const loginBtn = document.getElementById('btnLogin');
+      if(pill && lab){
+        if(canRead()){
+          pill.style.display = 'inline-flex';
+          lab.textContent = `${auth.user} • ${String(auth.role||'').toUpperCase()}`;
+        } else {
+          pill.style.display = 'none';
+          lab.textContent = '—';
+        }
+      }
+      if(logout){
+        logout.style.display = canRead() ? 'inline-flex' : 'none';
+      }
+      if(loginBtn){
+        loginBtn.style.display = canRead() ? 'none' : 'inline-flex';
+      }
+
+      // Subtítulos
+      const sr = document.getElementById('subtitleReader');
+      const se = document.getElementById('subtitleEditor');
+      if(sr && se){
+        if(canEdit()){
+          sr.style.display = 'none';
+          se.style.display = 'inline';
+          se.textContent = `ONLINE • ${String(auth.role||'EDITOR').toUpperCase()} • Acesso por login`
+        }else{
+          se.style.display = 'none';
+          sr.style.display = 'inline';
+          sr.textContent = `ONLINE • LEITOR • Acesso por login`;
+        }
       }
     }
-    function canEdit(){ return settings.edit && !!settings.key; }
-    function isSupervisor(){ return canEdit() && !!(settings.supkey||"").trim(); }
+
+    async function validateToken(){
+      // Se existe token salvo mas expirou no servidor, forca re-login
+      if(!auth || !auth.token) return false
+      const ctrl = new AbortController();
+      const t = setTimeout(()=>ctrl.abort(), 4500);
+      try{
+        const url = API_URL + (API_URL.includes('?')?'&':'?') + 'action=state_get&token=' + encodeURIComponent(auth.token);
+        const r = await fetch(url, { cache:'no-store', signal: ctrl.signal });
+        let j = null;
+        try{ j = await r.json(); }catch(_){ return false; }
+        if(j && j.ok === false) return false;
+        // aceita formato {ok:true,state:{...}} ou estado direto
+        if(j && j.ok && j.state) return true;
+        if(j && Array.isArray(j.items)) return true;
+        return false;
+      }catch(_){
+        return false;
+      } finally {
+        clearTimeout(t);
+      }
+    }
+
+    async function ensureAuth(){
+      authLoad();
+      updateUserUI();
+      if(canRead()){
+        const ok = await validateToken();
+        if(ok) return true;
+        authClear();
+        updateUserUI();
+      }
+
+      return new Promise((resolve)=>{
+        showLogin('Faça login para acessar.');
+        const btn = document.getElementById('loginBtn');
+        const u = document.getElementById('loginUser');
+        const p = document.getElementById('loginPass');
+        const rem = document.getElementById('loginRemember');
+
+        const handler = async ()=>{
+          try{
+            btn.disabled = true;
+            const user = (u.value||'').trim();
+            const pass = (p.value||'').trim();
+            if(!user || !pass) throw new Error('Preencha usuário e senha.');
+            await apiAuthLogin(user, pass, rem && rem.checked);
+            hideLogin();
+            updateUserUI();
+            setModeUI();
+            resolve(true);
+          }catch(e){
+            showLogin(String(e && e.message ? e.message : e));
+          }finally{
+            btn.disabled = false;
+          }
+        };
+
+        btn.onclick = handler;
+        p.onkeydown = (ev)=>{ if(ev.key === 'Enter') handler(); };
+        u.onkeydown = (ev)=>{ if(ev.key === 'Enter') handler(); };
+      });
+    }
 
     function signatureOf(st){
       // Prefer rev-based signature (very fast)
@@ -1928,9 +2092,11 @@
       const ctrl = new AbortController();
       const t = setTimeout(()=>ctrl.abort(), 12000);
       try{
-        const r = await fetch(API_URL, { cache:"no-store", signal: ctrl.signal });
-        const j = await r.json();
-        if(!j || !Array.isArray(j.items)) throw new Error("API inválida");
+        const r = await fetch(API_URL + (API_URL.includes('?')?'&':'?') + 'action=state_get&token=' + encodeURIComponent(auth.token), { cache:'no-store', signal: ctrl.signal });
+        let j = await r.json();
+        if(j && j.ok && j.state) j = j.state;
+        if(j && j.ok === false) throw new Error(j.error || 'Sem acesso');
+        if(!j || !Array.isArray(j.items)) throw new Error('API inválida');
         if(!Array.isArray(j.dispatches)) j.dispatches = [];
         // assinatura rápida (usa _rev se existir)
         try{
@@ -1950,7 +2116,7 @@
     async function apiPOST_bestEffort(payload){
       // Envia como text/plain (evita preflight e costuma ser mais rápido no Apps Script)
       const desiredSig = signatureOf(payload);
-      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(settings.key);
+      const url = API_URL + (API_URL.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(auth.token);
       const body = JSON.stringify(payload);
       const desiredRev = (payload && payload._rev) ? String(payload._rev) : '';
 
@@ -3213,7 +3379,8 @@ function computeTotals(date,bucket){
 
 
     async function init(){
-      parseHash();
+      await ensureAuth();
+      updateUserUI();
 
       // Atalhos da tela inicial
       document.addEventListener('click', (e)=>{
@@ -3368,8 +3535,6 @@ function computeTotals(date,bucket){
 
 
     // ---------- SUPORTE ----------
-    const SUPPORT_TOKEN = "Planjemaneto_2026_GBR_3P";
-
     (function(){
       const fab = document.getElementById("supportFab");
       const back = document.getElementById("supportBackdrop");
@@ -3399,7 +3564,7 @@ function computeTotals(date,bucket){
         if(!msg){ toast("Escreva a mensagem."); return; }
 
         resEl.textContent = "Enviando…";
-        const url = API_URL + (API_URL.includes("?")?"&":"?") + "action=inbox_add&token=" + encodeURIComponent(SUPPORT_TOKEN);
+        const url = API_URL + (API_URL.includes("?")?"&":"?") + "action=inbox_add&token=" + encodeURIComponent(auth.token);
         const payload = { sender, empresa, tipo, msg, ops, createdAt: nowISO() };
 
         // Tenta POST com confirmação (sem preflight)
@@ -3443,7 +3608,7 @@ function computeTotals(date,bucket){
 
     // ---------- SUPORTE (ABA - editores) ----------
     async function supportFetchInbox(){
-      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_list&key=" + encodeURIComponent(settings.key||"");
+      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_list&token=" + encodeURIComponent(auth.token);
       const r = await fetch(url, { cache:"no-store" });
       return await r.json();
     }
@@ -3555,7 +3720,7 @@ function populateSupportRespOptions(inbox){
       sel.value = values.includes(keep) ? keep : "ALL";
     }
 async function supportDeleteItem(payload){
-      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_delete&key=" + encodeURIComponent(settings.key||"") + "&supkey=" + encodeURIComponent(settings.supkey||"");
+      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_delete&token=" + encodeURIComponent(auth.token);
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type":"text/plain;charset=utf-8" },
@@ -3565,7 +3730,7 @@ async function supportDeleteItem(payload){
     }
 
 async function supportUpdateItem(payload){
-      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_update&key=" + encodeURIComponent(settings.key||"") + "&supkey=" + encodeURIComponent(settings.supkey||"");
+      const url = API_URL + (API_URL.includes("?") ? "&" : "?") + "action=inbox_update&token=" + encodeURIComponent(auth.token);
       payload.updatedAt = nowISO();
       try{
         const r = await fetch(url, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(payload) });
@@ -3769,7 +3934,7 @@ const id = btn.getAttribute('data-support-toggle');
         createdAt
       };
 
-      const url = API_URL + (API_URL.includes('?')?'&':'?') + 'action=inbox_add&token=' + encodeURIComponent(SUPPORT_TOKEN);
+      const url = API_URL + (API_URL.includes('?')?'&':'?') + 'action=inbox_add&token=' + encodeURIComponent(auth.token);
 
       const tryConfirmed = async ()=>{
         const r = await fetch(url, {
@@ -3935,6 +4100,8 @@ const id = btn.getAttribute('data-support-toggle');
     function wirePerfAndLock(){
       const perfBtn = document.getElementById('btnPerf');
       const lockBtn = document.getElementById('btnLock');
+      const logoutBtn = document.getElementById('btnLogout');
+      const loginBtn = document.getElementById('btnLogin');
       loadPerfMode();
 
       if(perfBtn){
@@ -3945,14 +4112,24 @@ const id = btn.getAttribute('data-support-toggle');
         });
       }
 
+      // Botão antigo de lock (não usado com login)
       if(lockBtn){
-        lockBtn.style.display = canEdit() ? 'inline-flex' : 'none';
-        lockBtn.addEventListener('click', ()=>{
-          if(!confirm('Bloquear edição neste navegador? (você volta para leitura)')) return;
+        lockBtn.style.display = 'none';
+      }
+
+      if(loginBtn){
+        loginBtn.addEventListener('click', ()=>{
+          authClear();
+          showLogin('Faça login para acessar.');
+        });
+      }
+
+      if(logoutBtn){
+        logoutBtn.addEventListener('click', ()=>{
+          if(!confirm('Sair deste usuário?')) return;
+          // limpa sessão e recarrega
+          authClear();
           try{ sessionStorage.removeItem('exec:key'); sessionStorage.removeItem('exec:supkey'); sessionStorage.removeItem('exec:editor'); }catch(_){ }
-          try{ localStorage.removeItem('execDraft:' + (settings.key||'')); }catch(_){ }
-          // remove hash e recarrega
-          try{ history.replaceState(null,'', location.pathname + location.search); }catch(_){ location.hash=''; }
           location.reload();
         });
       }
