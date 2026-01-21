@@ -244,6 +244,17 @@
     /* Modal */
     .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:50;padding:14px}
     .backdrop.open{display:grid}
+    /* Login: fundo mais sólido (não deixa o app aparecer) */
+    #loginBackdrop{
+      background: radial-gradient(1200px 600px at 50% 0%, rgba(37,99,235,.18), rgba(2,6,23,.94));
+      backdrop-filter: blur(10px) saturate(120%);
+      -webkit-backdrop-filter: blur(10px) saturate(120%);
+    }
+    #loginBackdrop .modal{
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 30px 90px rgba(0,0,0,.55);
+    }
+
     .modal{width:min(980px,100%);background:linear-gradient(180deg, rgba(16,31,54,.98), rgba(15,26,46,.98));
       border:1px solid rgba(255,255,255,.14);border-radius:18px;box-shadow:0 28px 70px rgba(0,0,0,.55);overflow:hidden}
     .modal-header{padding:14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
@@ -629,43 +640,101 @@ details.panel > summary{
 details.panel > summary::-webkit-details-marker{display:none}
 details.panel[open] > summary{margin-bottom:10px}
 
-    /* Agenda: foco em HOJE / AMANHÃ (mais explícito) */
-    .daySwitch{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    /* Agenda: atalhos Hoje / Amanhã (compacto e bonito) */
+    .daySwitch{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    .daySwitch .dayHint{font-weight:700;color:var(--muted)}
     .dayBtn{
-      border:1px solid rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.04);
-      padding:10px 12px;
-      border-radius:14px;
+      padding:6px 10px;
+      border-radius:999px;
       cursor:pointer;
-      display:flex;
+      display:inline-flex;
       align-items:center;
-      gap:10px;
-      font-weight:900;
-      letter-spacing:.2px;
+      gap:8px;
+      font-weight:800;
+      font-size:12px;
+      letter-spacing:0;
       user-select:none;
       transition:.15s ease;
-    }
-    .dayBtn small{
-      font-weight:700;
-      color: var(--muted);
-      letter-spacing:0;
+      line-height:1.1;
     }
     .dayBtn:hover{ background: rgba(255,255,255,.06); transform:translateY(-1px); }
     .dayBtn.active{
-      background: linear-gradient(135deg, rgba(79,156,255,.28), rgba(79,156,255,.08));
+      background: linear-gradient(135deg, rgba(79,156,255,.22), rgba(79,156,255,.08));
       border-color: rgba(79,156,255,.45);
       box-shadow: 0 10px 22px rgba(79,156,255,.12);
     }
-    .dayBtn .kbd{
-      font-family: var(--mono);
-      font-size:11px;
-      padding:4px 8px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.20);
+    .dayBtn .dayDate{
+      font-weight:700;
       color: var(--muted);
+      font-size:12px;
+      letter-spacing:0;
     }
+    .dayBtn .icon{font-size:13px;line-height:1;}
 
+
+/* Agenda - resumo mais claro (hoje/amanhã + tabela rápida) */
+.agenda-focus{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  margin:12px 0 10px;
+}
+@media (max-width: 900px){
+  .agenda-focus{ grid-template-columns:1fr; }
+}
+.focusCard{
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+  overflow:hidden;
+}
+.focusCard .d{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:6px;
+}
+.focusCard .t{
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.focusCard .meta{
+  margin-top: 8px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.focusCard .meta .pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 10px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background: rgba(255,255,255,.03);
+  font-size: 12px;
+  color: var(--muted);
+}
+.agendaResumo{ margin-top: 10px; }
+.agendaResumo .table td{ vertical-align: top; }
+.agendaResumo .rowToday{
+  background: linear-gradient(135deg, rgba(79,156,255,.14), rgba(79,156,255,.04));
+}
+.agendaResumo .rowTomorrow{
+  background: linear-gradient(135deg, rgba(0,214,170,.10), rgba(0,214,170,.03));
+}
+.agendaResumo .empLine{
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.25;
+}
 </style>
 </head>
 <body>
@@ -977,16 +1046,17 @@ details.panel[open] > summary{margin-bottom:10px}
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
             <div>
               <h3 style="margin:0">Agendamentos de disparos</h3>
-              <div class="muted" style="margin-top:6px">Use HOJE e AMANHÃ para focar rápido. Os filtros abaixo controlam o período e as empresas.</div>
+              <div class="muted" style="margin-top:6px">Use os atalhos de dia (Hoje/Amanhã) para focar rápido. Os filtros abaixo controlam o período e as empresas.</div>
             </div>
             <div class="controls" style="justify-content:flex-end;gap:8px;flex-wrap:wrap">
               <span class="chip"><strong id="kpiHoje">—</strong> disparos hoje</span>
               <div class="daySwitch" aria-label="Atalhos de dia">
+                <span class="dayHint">Atalhos:</span>
                 <button class="dayBtn" id="btnAgendaHoje" type="button" title="Focar em Hoje">
-                  HOJE <small id="lblAgendaHoje">—</small><span class="kbd">H</span>
+                  <span class="icon">📅</span><span>Hoje</span><span class="dayDate" id="lblAgendaHoje">—</span>
                 </button>
                 <button class="dayBtn" id="btnAgendaAmanha" type="button" title="Focar em Amanhã">
-                  AMANHÃ <small id="lblAgendaAmanha">—</small><span class="kbd">A</span>
+                  <span class="icon">➡️</span><span>Amanhã</span><span class="dayDate" id="lblAgendaAmanha">—</span>
                 </button>
               </div>
 
@@ -1031,7 +1101,9 @@ details.panel[open] > summary{margin-bottom:10px}
 <div class="gridAgenda">
           <div class="panel agenda-prog">
             <h3>Programação (disparos por empresa)</h3>
-            <div class="muted">Resumo por dia e por empresa. Abra as datas para ver as linhas detalhadas.</div>
+            <div class="muted">Resumo por dia e por empresa. (Hoje/Amanhã + tabela rápida). Abra as datas para ver as linhas detalhadas.</div>
+            <div id="agendaProgFocus" class="agenda-focus"></div>
+            <div id="agendaProgResumo" class="agendaResumo"></div>
             <div class="hr"></div>
             <div id="agendaProg"></div>
           </div>
@@ -3015,10 +3087,18 @@ function computeTotals(date,bucket){
 
     // ---------- AGENDA ----------
     function renderAgendaProg(){
-      const wrap=$("#agendaProg");
-      wrap.innerHTML="";
+      const wrap = $("#agendaProg");
+      const focusWrap = document.getElementById("agendaProgFocus");
+      const resumoWrap = document.getElementById("agendaProgResumo");
+      wrap.innerHTML = "";
+      if(focusWrap) focusWrap.innerHTML = "";
+      if(resumoWrap) resumoWrap.innerHTML = "";
+
       const bucketSet = getSelectedBuckets();
-      const byDate=new Map();
+      const empresaOf = (bucket)=> String(bucket||"").split("_")[0]; // GBR_CLT -> GBR
+
+      // Agrupa por data respeitando filtros
+      const byDate = new Map();
       for(const d of (state.dispatches||[])){
         if(!d.date) continue;
         const date = d.date;
@@ -3028,83 +3108,129 @@ function computeTotals(date,bucket){
         if(!byDate.has(date)) byDate.set(date, []);
         byDate.get(date).push({ ...d, bucket: b });
       }
-      const dates=[...byDate.keys()].sort();
+      const dates = [...byDate.keys()].sort();
 
-      // Foco: próximos dias (hoje/amanhã) com total por empresa
-      const focusWrap = document.getElementById("agendaProgFocus");
-      const focusDates = dates.slice(0,2);
-      if(focusWrap){
-        if(focusDates.length){
-          const cards = focusDates.map((date,idx)=>{
-            const arr = byDate.get(date) || [];
-            const total = arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
-            const totals = new Map();
-            for(const it of arr){
-              totals.set(it.bucket, (totals.get(it.bucket)||0) + (Number(it.qty)||0));
-            }
-            const label = idx===0 ? "Hoje" : "Amanhã";
-            return `
-              <div class="focusCard">
-                <div class="d"><span><b>${label}</b> • ${escapeHtml(toBR(date))}</span><span class="muted">${arr.length} linha(s)</span></div>
-                <div class="t">${total ? String(total) : "—"} <span class="muted" style="font-size:12px;font-weight:700">disparos</span></div>
-                <div class="chips">
-                  ${Array.from(totals.entries()).sort((a,b)=>Number(b[1])-Number(a[1]))
-                    .map(([b,t])=>`<span class="chip"><strong>${escapeHtml(bucketLabel(b))}:</strong> ${t}</span>`).join("")}
-                </div>
-              </div>
-            `;
-          }).join("");
-          focusWrap.innerHTML = cards;
-        }else{
-          focusWrap.innerHTML = '<div class="muted">Sem programação no período selecionado.</div>';
+      // Foco real: hoje e amanhã (se existirem)
+      const today = todayISO();
+      const tomorrow = addDays(today, 1);
+      const focusDates = [today, tomorrow].filter(d=>byDate.has(d));
+
+      // Helpers de soma
+      const totalsByEmpresa = (arr)=>{
+        const m = new Map();
+        for(const it of (arr||[])){
+          const emp = empresaOf(it.bucket);
+          m.set(emp, (m.get(emp)||0) + (Number(it.qty)||0));
         }
+        return m;
+      };
+      const totalsToPills = (m)=>{
+        const entries = Array.from(m.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
+        if(!entries.length) return `<span class="muted">Sem programação</span>`;
+        return entries.map(([emp,val])=>`<span class="pill"><strong>${escapeHtml(emp)}:</strong> ${Number(val||0)}</span>`).join("");
+      };
+      const totalsToLine = (m)=>{
+        const entries = Array.from(m.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
+        if(!entries.length) return "Sem programação";
+        return entries.map(([emp,val])=>`${emp} ${Number(val||0)}`).join(" • ");
+      };
+
+      // Render foco (Hoje/Amanhã) — compacto e objetivo
+      if(focusWrap){
+        const slots = [
+          { label:"Hoje", date: today, cls:"rowToday" },
+          { label:"Amanhã", date: tomorrow, cls:"rowTomorrow" }
+        ];
+        focusWrap.innerHTML = slots.map(s=>{
+          const arr = byDate.get(s.date) || [];
+          const total = arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
+          const empTotals = totalsByEmpresa(arr);
+          return `
+            <div class="focusCard">
+              <div class="d">
+                <span><b>${escapeHtml(s.label)}</b> • ${escapeHtml(toBR(s.date))}</span>
+                <span class="muted">${arr.length ? (arr.length + " linha(s)") : "—"}</span>
+              </div>
+              <div class="t">${total ? String(total) : "0"} <span class="muted" style="font-weight:700;font-size:13px">disparos</span></div>
+              <div class="meta">${totalsToPills(empTotals)}</div>
+            </div>
+          `;
+        }).join("");
       }
 
-      let itemCount = 0;
-
       if(!dates.length){
+        if(resumoWrap){
+          resumoWrap.innerHTML = `<div class="muted">Nenhuma programação no filtro selecionado.</div>`;
+        }
         wrap.innerHTML = `<div class="muted">Nenhuma programação no filtro selecionado.</div>`;
         $("#agendaCount").textContent = "0";
         return;
       }
 
+      // Tabela rápida (1 linha por dia) — pra bater o olho
+      if(resumoWrap){
+        const rows = dates.map(date=>{
+          const arr = byDate.get(date) || [];
+          const total = arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
+          const empTotals = totalsByEmpresa(arr);
+          const cls = (date===today) ? "rowToday" : (date===tomorrow ? "rowTomorrow" : "");
+          return `
+            <tr class="${cls}">
+              <td style="white-space:nowrap"><b>${escapeHtml(toBR(date))}</b></td>
+              <td style="white-space:nowrap"><b>${total}</b></td>
+              <td><div class="empLine">${escapeHtml(totalsToLine(empTotals))}</div></td>
+            </tr>
+          `;
+        }).join("");
+        resumoWrap.innerHTML = `
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:140px">Data</th>
+                <th style="width:120px">Total</th>
+                <th>Por empresa</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      }
+
+      // Detalhamento por dia (abre só hoje/amanhã se existir)
+      let itemCount = 0;
       for(const date of dates){
-        const arr=byDate.get(date).slice();
+        const arr = byDate.get(date).slice();
         itemCount += arr.length;
-        const total=arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
+        const total = arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
 
-        // Totais por carteira
-        const totals = new Map();
-        for(const it of arr){
-          totals.set(it.bucket, (totals.get(it.bucket)||0) + (Number(it.qty)||0));
-        }
+        // Totais por empresa (pra não confundir com produto)
+        const empTotals = totalsByEmpresa(arr);
 
-        const det=document.createElement("details");
-        det.open = (typeof focusDates !== "undefined" && focusDates.includes(date));
+        const det = document.createElement("details");
+        det.open = focusDates.includes(date);
         det.innerHTML = `
           <summary>
             <div>
-              <div><b>📅 ${toBR(date)}</b></div>
+              <div><b>📅 ${escapeHtml(toBR(date))}</b></div>
               <div class="muted">${arr.length} linha(s) • Total <b>${total}</b></div>
             </div>
             <div class="summary-right">
-              ${Array.from(totals.entries()).sort((a,b)=>a[0].localeCompare(b[0]))
-                .map(([b,t])=>`<span class="chip"><strong>${bucketLabel(b)}:</strong> ${t}</span>`).join("")}
+              ${Array.from(empTotals.entries()).sort((a,b)=>a[0].localeCompare(b[0]))
+                .map(([emp,t])=>`<span class="chip"><strong>${escapeHtml(emp)}:</strong> ${Number(t||0)}</span>`).join("")}
             </div>
           </summary>
         `;
 
+        // Mantém o detalhamento completo (por bucket) só dentro do "abre"
         const buckets = Array.from(new Set(arr.map(x=>x.bucket))).sort();
         for(const b of buckets){
-          const sub=arr.filter(x=>x.bucket===b).slice()
-            .sort((x,y)=>(String(x.time||"")).localeCompare(String(y.time||"")) || String(x.code||"").localeCompare(String(y.code||"")));
+          const sub = arr.filter(x=>x.bucket===b).slice().sort((a,b)=>String(a.time||"").localeCompare(String(b.time||"")));
           const subTotal = sub.reduce((a,x)=>a+(Number(x.qty)||0),0);
-
-          const section=document.createElement("div");
+          const section = document.createElement("div");
           section.style.marginTop = "10px";
           section.innerHTML = `
             <div class="controls" style="justify-content:space-between;align-items:center">
-              <div><b>${bucketLabel(b)}</b></div>
+              <div><b>${escapeHtml(bucketLabel(b))}</b></div>
               <span class="chip"><strong>Total</strong> ${subTotal}</span>
             </div>
             <table class="table">
@@ -3120,7 +3246,7 @@ function computeTotals(date,bucket){
                 ${sub.map(d=>`
                   <tr>
                     <td>${escapeHtml(d.time||"")}</td>
-                    <td class="mono">${escapeHtml(d.code||"")}</td>
+                    <td>${escapeHtml(d.slot||"")}</td>
                     <td><b>${Number(d.qty||0)}</b></td>
                     <td>${escapeHtml((d.operator||"").toUpperCase())}</td>
                   </tr>
