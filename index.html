@@ -735,6 +735,15 @@ details.panel[open] > summary{margin-bottom:10px}
   font-size: 13px;
   line-height: 1.25;
 }
+
+    /* Programação: seleção em massa */
+    #progSelAll, #progBody .selBox{
+      width:16px;height:16px;
+      accent-color: var(--accent);
+      cursor:pointer;
+    }
+    #progBody td.selCol{ text-align:center; }
+
 </style>
 </head>
 <body>
@@ -1236,6 +1245,9 @@ details.panel[open] > summary{margin-bottom:10px}
                 </div>
                 <button class="btn" id="btnAddLine" disabled>＋ Linha</button>
                 <button class="btn" id="btnImport" disabled>Importar texto</button>
+                <button class="btn danger" id="btnDeleteSelected" disabled>🗑 Apagar selecionados</button>
+                <button class="btn danger" id="btnClearProg" disabled>🧹 Limpar</button>
+                <span id="progSelCount" style="margin-left:8px;color:var(--muted);font-size:12px"></span>
               </div>
               <div class="controls">
                 <span class="chip" id="totals"><strong>0</strong> linhas • <strong>0</strong> disparos</span>
@@ -1244,10 +1256,11 @@ details.panel[open] > summary{margin-bottom:10px}
               </div>
             </div>
 
-            <div style="max-height:520px;overflow:auto;border-radius:14px">
+            <div id="progTableWrap" style="max-height:520px;overflow:auto;border-radius:14px">
               <table class="table">
                 <thead>
                   <tr>
+                    <th style="width:46px;text-align:center"><input id="progSelAll" type="checkbox" title="Selecionar tudo" /></th>
                     <th style="width:180px">Operador</th>
                     <th style="width:140px">4 dígitos</th>
                     <th style="width:110px">Qtd</th>
@@ -1683,6 +1696,7 @@ details.panel[open] > summary{margin-bottom:10px}
     const bucketLabel = (id)=> (BUCKETS.find(b=>b.id===id)?.label || id);
 
     let state = { items: [], dispatches: [], metas: {} };
+    let _progLastKey = ""; // preserva seleção em Programação (mesmo filtro)
     let auth = { token:"", role:"", user:"" };
     const AUTH_STORE = "exec:auth";
     let syncing=false, dirty=false, lastSig="";
@@ -2987,24 +3001,86 @@ function computeTotals(date,bucket){
       return out.join("\n").trim()+"\n";
     }
 
+    
+    function _progSelectedIds_(){
+      return Array.from(document.querySelectorAll('#progBody input.selBox:checked'))
+        .map(cb=>cb.getAttribute('data-id'))
+        .filter(Boolean);
+    }
+
+    function updateProgBulkUI(){
+      const editable = canEdit();
+      const ids = _progSelectedIds_();
+      const btnDelSel = $("#btnDeleteSelected");
+      const btnClear = $("#btnClearProg");
+      const selAll = $("#progSelAll");
+      const count = $("#progSelCount");
+
+      if(btnDelSel) btnDelSel.disabled = !editable || ids.length===0;
+      if(btnClear) btnClear.disabled = !editable;
+
+      const boxes = Array.from(document.querySelectorAll('#progBody input.selBox'));
+      if(selAll){
+        selAll.disabled = !editable || boxes.length===0;
+        const allChecked = boxes.length>0 && boxes.every(b=>b.checked);
+        const someChecked = boxes.some(b=>b.checked);
+        selAll.checked = allChecked;
+        selAll.indeterminate = someChecked && !allChecked;
+      }
+      if(count) count.textContent = ids.length ? (ids.length + " selecionado(s)") : "";
+    }
+
+    function deleteProgSelected(){
+      if(!canEdit()) return toast("Sem permissão.");
+      const ids = _progSelectedIds_();
+      if(ids.length===0) return toast("Selecione as linhas para apagar.");
+      if(!confirm("Apagar " + ids.length + " linha(s) da programação?")) return;
+      state.dispatches = state.dispatches.filter(x=>!ids.includes(String(x.id)));
+      scheduleSave();
+      renderAgendaProg();
+      renderProg();
+      toast("Linhas apagadas.");
+    }
+
+    function clearProgCurrent(){
+      if(!canEdit()) return toast("Sem permissão.");
+      const date = getProgDate();
+      const bucket = getProgBucket();
+      const list = listDispatches(date,bucket);
+      if(list.length===0) return toast("Nada para limpar.");
+      if(!confirm("Limpar TODA a programação deste filtro?\n\nData: " + date + "\nEmpresa: " + bucket + "\n\nSerão apagadas " + list.length + " linha(s).")) return;
+      state.dispatches = state.dispatches.filter(x=>!(String(x.date||"")===String(date) && String(x.bucket||"")===String(bucket)));
+      scheduleSave();
+      renderAgendaProg();
+      renderProg();
+      toast("Programação limpa.");
+    }
+
+
     function renderProg(){
       const date=getProgDate(), bucket=getProgBucket();
+      const _key = String(date||"")+"|"+String(bucket||"");
+      const prevSel = (_progLastKey === _key) ? new Set(_progSelectedIds_()) : new Set();
+      _progLastKey = _key;
       const tbody=$("#progBody");
+      const wrap=$("#progTableWrap");
+      const _scrollTop = wrap ? wrap.scrollTop : 0;
       tbody.innerHTML="";
       const editable=canEdit();
       const list=listDispatches(date,bucket).slice().sort((a,b)=>String(a.time||"").localeCompare(String(b.time||"")));
       for(const d of list){
         const tr=document.createElement("tr");
         tr.innerHTML = `
+          <td class="selCol"><input class="selBox" type="checkbox" data-id="${d.id}" ${prevSel.has(String(d.id)) ? "checked" : ""} ${editable?"":"disabled"}></td>
           <td><input class="cell" ${editable?"":"disabled"} data-id="${d.id}" data-k="operator" value="${escapeHtml(d.operator||"")}"></td>
           <td><input class="cell" ${editable?"":"disabled"} data-id="${d.id}" data-k="code" value="${escapeHtml(d.code||"")}"></td>
           <td><input class="cell" ${editable?"":"disabled"} type="number" data-id="${d.id}" data-k="qty" value="${Number(d.qty||0)}"></td>
           <td><input class="cell" ${editable?"":"disabled"} type="time" data-id="${d.id}" data-k="time" value="${escapeHtml(d.time||"")}"></td>
-          <td><button class="btn" ${editable?"":"disabled"} data-del="${d.id}">Del</button></td>
+          <td><button class="btn danger" ${editable?"":"disabled"} data-del="${d.id}">🗑</button></td>
         `;
         tbody.appendChild(tr);
       }
-      tbody.querySelectorAll("input[data-id]").forEach(inp=>{
+      tbody.querySelectorAll("input.cell[data-id][data-k]").forEach(inp=>{
         inp.addEventListener("change", ()=>{
           if(!canEdit()) return;
           const id=inp.getAttribute("data-id");
@@ -3022,6 +3098,10 @@ function computeTotals(date,bucket){
           renderProg();
         });
       });
+      tbody.querySelectorAll("input.selBox").forEach(cb=>cb.addEventListener("change", updateProgBulkUI));
+      updateProgBulkUI();
+      if(wrap) wrap.scrollTop = _scrollTop;
+
       tbody.querySelectorAll("button[data-del]").forEach(btn=>{
         btn.addEventListener("click", ()=>{
           if(!canEdit()) return;
@@ -3922,6 +4002,34 @@ function computeTotals(date,bucket){
       try{ await navigator.clipboard.writeText(text); toast("Copiado."); }
       catch(e){ toast("Não consegui copiar automaticamente."); }
     });
+
+    // Programação: ações em lote (selecionar tudo / apagar selecionados / limpar)
+    (function wireProgBulk(){
+      const delBtn = document.getElementById("btnDeleteSelected");
+      if(delBtn && !delBtn.__wired){
+        delBtn.__wired = true;
+        delBtn.addEventListener("click", deleteProgSelected);
+      }
+      const clrBtn = document.getElementById("btnClearProg");
+      if(clrBtn && !clrBtn.__wired){
+        clrBtn.__wired = true;
+        clrBtn.addEventListener("click", clearProgCurrent);
+      }
+      const selAll = document.getElementById("progSelAll");
+      if(selAll && !selAll.__wired){
+        selAll.__wired = true;
+        selAll.addEventListener("change", ()=>{
+          if(!canEdit()) return;
+          const on = selAll.checked;
+          document.querySelectorAll("#progBody input.selBox").forEach(cb=>{
+            if(cb.disabled) return;
+            cb.checked = on;
+          });
+          updateProgBulkUI();
+        });
+      }
+    })();
+
 
     function renderAll(){
       // Mantido para botões de recarregar; usa render atual + agenda
