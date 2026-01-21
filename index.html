@@ -596,17 +596,6 @@
 /* --- UI PRO: Agenda foco Programação --- */
 .gridAgenda{display:grid;grid-template-columns: 1fr;gap:12px;}
 @media(max-width:980px){.gridAgenda{grid-template-columns:1fr}}
-#agendaProgFocus{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
-.focusCard{
-  flex:1;min-width:260px;
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:16px;
-  background: rgba(9,14,25,.22);
-  padding:12px;
-}
-.focusCard .d{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.focusCard .t{font-size:20px;font-weight:900;margin-top:6px;letter-spacing:.2px}
-.focusCard .chips{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
 .agenda-prog details > summary{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:10px 10px;border-radius:14px;
@@ -639,6 +628,44 @@ details.panel > summary{
 }
 details.panel > summary::-webkit-details-marker{display:none}
 details.panel[open] > summary{margin-bottom:10px}
+
+    /* Agenda: foco em HOJE / AMANHÃ (mais explícito) */
+    .daySwitch{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    .dayBtn{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:900;
+      letter-spacing:.2px;
+      user-select:none;
+      transition:.15s ease;
+    }
+    .dayBtn small{
+      font-weight:700;
+      color: var(--muted);
+      letter-spacing:0;
+    }
+    .dayBtn:hover{ background: rgba(255,255,255,.06); transform:translateY(-1px); }
+    .dayBtn.active{
+      background: linear-gradient(135deg, rgba(79,156,255,.28), rgba(79,156,255,.08));
+      border-color: rgba(79,156,255,.45);
+      box-shadow: 0 10px 22px rgba(79,156,255,.12);
+    }
+    .dayBtn .kbd{
+      font-family: var(--mono);
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.20);
+      color: var(--muted);
+    }
+
 </style>
 </head>
 <body>
@@ -760,6 +787,7 @@ details.panel[open] > summary{margin-bottom:10px}
                 <select id="dashQuick" style="border:0;outline:0;background:transparent;color:var(--text)">
                   <option value="7">Próximos 7 dias</option>
                   <option value="today">Hoje</option>
+                  <option value="tomorrow">Amanhã</option>
                   <option value="all">Tudo</option>
                 </select>
               </div>
@@ -949,10 +977,19 @@ details.panel[open] > summary{margin-bottom:10px}
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
             <div>
               <h3 style="margin:0">Agendamentos de disparos</h3>
-              <div class="muted" style="margin-top:6px">Totais por empresa aparecem no topo (Hoje/Amanhã). Use os filtros para ver o dia seguinte ou o período completo.</div>
+              <div class="muted" style="margin-top:6px">Use HOJE e AMANHÃ para focar rápido. Os filtros abaixo controlam o período e as empresas.</div>
             </div>
             <div class="controls" style="justify-content:flex-end;gap:8px;flex-wrap:wrap">
               <span class="chip"><strong id="kpiHoje">—</strong> disparos hoje</span>
+              <div class="daySwitch" aria-label="Atalhos de dia">
+                <button class="dayBtn" id="btnAgendaHoje" type="button" title="Focar em Hoje">
+                  HOJE <small id="lblAgendaHoje">—</small><span class="kbd">H</span>
+                </button>
+                <button class="dayBtn" id="btnAgendaAmanha" type="button" title="Focar em Amanhã">
+                  AMANHÃ <small id="lblAgendaAmanha">—</small><span class="kbd">A</span>
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
@@ -994,9 +1031,8 @@ details.panel[open] > summary{margin-bottom:10px}
 <div class="gridAgenda">
           <div class="panel agenda-prog">
             <h3>Programação (disparos por empresa)</h3>
-            <div class="muted">Foco: totais por empresa (Hoje/Amanhã) + linhas detalhadas abaixo.</div>
+            <div class="muted">Resumo por dia e por empresa. Abra as datas para ver as linhas detalhadas.</div>
             <div class="hr"></div>
-            <div id="agendaProgFocus"></div>
             <div id="agendaProg"></div>
           </div>
           <details class="panel bm-details" id="agendaBmsDetails">
@@ -1523,9 +1559,13 @@ details.panel[open] > summary{margin-bottom:10px}
     function applyQuickRange(){
       const q = $("#fQuick").value;
       const today = todayISO();
+      const tomorrow = addDays(today, 1);
       if(q === "today"){
         $("#fFrom").value = today;
         $("#fTo").value = today;
+      } else if(q === "tomorrow"){
+        $("#fFrom").value = tomorrow;
+        $("#fTo").value = tomorrow;
       } else if(q === "7"){
         $("#fFrom").value = today;
         $("#fTo").value = addDays(today, 7);
@@ -1535,6 +1575,7 @@ details.panel[open] > summary{margin-bottom:10px}
       }
       renderAgendaProg();
       renderAgendaBms();
+      try{ updateAgendaDayFocus(); }catch(_){}
     }
 
     function updateHeroSummary(){
@@ -1606,6 +1647,8 @@ details.panel[open] > summary{margin-bottom:10px}
         if(!raw) return null;
         const d = JSON.parse(raw);
         if(!d || !d.state) return null;
+        // Se o rascunho local for muito antigo, descarta para evitar travar a sincronização
+        try{ if(d.ts && (Date.now() - Number(d.ts)) > 6*60*60*1000){ clearDraft(); return null; } }catch(_){ }
         // normaliza campos esperados
         if(!Array.isArray(d.state.items)) d.state.items = [];
         if(!Array.isArray(d.state.dispatches)) d.state.dispatches = [];
@@ -2341,7 +2384,7 @@ details.panel[open] > summary{margin-bottom:10px}
       const ctrl = new AbortController();
       const t = setTimeout(()=>ctrl.abort(), 12000);
       try{
-        const r = await fetch(API_URL + (API_URL.includes('?')?'&':'?') + 'action=state_get&token=' + encodeURIComponent(auth.token), { cache:'no-store', signal: ctrl.signal });
+        const r = await fetch(API_URL + (API_URL.includes('?')?'&':'?') + 'action=state_get&token=' + encodeURIComponent(auth.token) + '&_ts=' + Date.now() + '&_ts=' + Date.now(), { cache:'no-store', signal: ctrl.signal });
         let j = await r.json();
         if(j && j.ok && j.state) j = j.state;
         if(j && j.ok === false) throw new Error(j.error || 'Sem acesso');
@@ -2519,6 +2562,7 @@ details.panel[open] > summary{margin-bottom:10px}
             dirty = false;
             clearDraft();
             toast("Salvo no online.");
+            try{ localStorage.setItem("__bm_rev_broadcast", String(snapshot._rev || Date.now())); }catch(_){ }
           }else{
             // Houve novas mudanças enquanto salvava → mantém dirty e agenda novo save
             dirty = true;
@@ -2559,12 +2603,11 @@ async function poll(){
       // Evita concorrência e evita travar quando a aba está oculta
       if(document.hidden) return;
       // evita "tique" durante uso
-      if(Date.now() - (window.__lastUI || 0) < 1200) return;
+      if(canEdit() && Date.now() - (window.__lastUI || 0) < 1200) return;
       const ae = document.activeElement;
-      if(ae && ['INPUT','TEXTAREA','SELECT'].includes(ae.tagName)) return;
+      if(canEdit() && ae && ['INPUT','TEXTAREA','SELECT'].includes(ae.tagName)) return;
 
-      if(syncing) return;
-      if(dirty && canEdit()) return;
+      if(syncing || dirty) return;
       if(window.__pollInFlight) return;
       window.__pollInFlight = true;
       try{
@@ -3795,8 +3838,43 @@ function computeTotals(date,bucket){
         $("#fQuick").value = "7";
         $("#fFrom").value = todayISO();
         $("#fTo").value = addDays(todayISO(), 7);
+        try{ updateAgendaDayFocus(); }catch(_){ }
         $("#fQuick").addEventListener("change", applyQuickRange);
         $("#btnApply").addEventListener("click", ()=>{ renderAgendaProg(); renderAgendaBms(); });
+        // Foco rápido: HOJE / AMANHÃ (UI)
+        const _fmtBR = (iso)=> iso ? iso.split("-").reverse().join("/") : "—";
+        window.updateAgendaDayFocus = function(){
+          const today = todayISO();
+          const tomorrow = addDays(today, 1);
+          const from = $("#fFrom")?.value || "";
+          const to = $("#fTo")?.value || "";
+          if($("#lblAgendaHoje")) $("#lblAgendaHoje").textContent = _fmtBR(today);
+          if($("#lblAgendaAmanha")) $("#lblAgendaAmanha").textContent = _fmtBR(tomorrow);
+          const bH = $("#btnAgendaHoje"), bA = $("#btnAgendaAmanha");
+          if(bH) bH.classList.toggle("active", from===today && to===today);
+          if(bA) bA.classList.toggle("active", from===tomorrow && to===tomorrow);
+        };
+        const bHoje = $("#btnAgendaHoje"), bAmanha = $("#btnAgendaAmanha");
+        if(bHoje) bHoje.addEventListener("click", ()=>{
+          $("#fQuick").value = "today";
+          applyQuickRange();
+          window.scrollTo({top:0, behavior:"smooth"});
+        });
+        if(bAmanha) bAmanha.addEventListener("click", ()=>{
+          $("#fQuick").value = "tomorrow";
+          applyQuickRange();
+          window.scrollTo({top:0, behavior:"smooth"});
+        });
+        // Atalhos de teclado (H = hoje, A = amanhã) somente quando a Agenda estiver visível
+        document.addEventListener("keydown", (e)=>{
+          if(e.altKey||e.ctrlKey||e.metaKey) return;
+          const vA = $("#viewAgenda");
+          if(!vA || vA.style.display==="none") return;
+          const k = (e.key||"").toLowerCase();
+          if(k==="h"){ e.preventDefault(); bHoje?.click(); }
+          if(k==="a"){ e.preventDefault(); bAmanha?.click(); }
+        });
+
         document.querySelectorAll("input.bucket").forEach(cb=>cb.addEventListener("change", ()=>{ renderAgendaProg(); renderAgendaBms(); }));
       }
 
@@ -3807,18 +3885,13 @@ function computeTotals(date,bucket){
       try{
         const d = readDraft();
         if(d && d.state){
-          if(canEdit()){
-            state = d.state;
-            dirty = true;
-            changeRev++;
-            lastSig = signatureOf(state);
-            setTab("agenda");
-            toast("Rascunho local carregado. Sincronizando…");
-            renderedOnce = true;
-          }else{
-            // Leitor: não pode editar; descarta rascunho para não travar sincronização
-            try{ clearDraft(); }catch(_){ }
-          }
+          state = d.state;
+          dirty = true;
+          changeRev++;
+          lastSig = signatureOf(state);
+          setTab("agenda");
+          toast("Rascunho local carregado. Sincronizando…");
+          renderedOnce = true;
         }
       }catch(_){ }
 
@@ -3843,8 +3916,8 @@ function computeTotals(date,bucket){
         try{
           const remote = await apiGET();
           const sigR = signatureOf(remote);
-          // Se há edição pendente (apenas para quem pode editar), não sobrescreve
-          if(!dirty || !canEdit()){
+          // Se há edição pendente, não sobrescreve
+          if(!dirty){
             if(!lastSig || sigR !== lastSig){
               state = remote;
               lastSig = sigR;
@@ -3852,6 +3925,7 @@ function computeTotals(date,bucket){
               renderCurrentTab();
             }
           }
+          // grava cache
           const payload = { ts: Date.now(), state: remote, sig: sigR };
           const key = cacheKeyOnline();
           if('requestIdleCallback' in window) requestIdleCallback(()=>cacheSet(key, payload).catch(()=>{}), {timeout: 1200});
@@ -3867,6 +3941,8 @@ function computeTotals(date,bucket){
 
           // Polling (leitores e editores)
           setInterval(poll, 15000);
+        document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) poll(); });
+        window.addEventListener('storage', (e)=>{ if(e && e.key==='__bm_rev_broadcast') poll(); });
           supportPoll();
           setInterval(supportPoll, 15000);
         }catch(e){
