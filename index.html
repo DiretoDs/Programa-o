@@ -2563,7 +2563,8 @@ async function poll(){
       const ae = document.activeElement;
       if(ae && ['INPUT','TEXTAREA','SELECT'].includes(ae.tagName)) return;
 
-      if(syncing || dirty) return;
+      if(syncing) return;
+      if(dirty && canEdit()) return;
       if(window.__pollInFlight) return;
       window.__pollInFlight = true;
       try{
@@ -3806,13 +3807,18 @@ function computeTotals(date,bucket){
       try{
         const d = readDraft();
         if(d && d.state){
-          state = d.state;
-          dirty = true;
-          changeRev++;
-          lastSig = signatureOf(state);
-          setTab("agenda");
-          toast("Rascunho local carregado. Sincronizando…");
-          renderedOnce = true;
+          if(canEdit()){
+            state = d.state;
+            dirty = true;
+            changeRev++;
+            lastSig = signatureOf(state);
+            setTab("agenda");
+            toast("Rascunho local carregado. Sincronizando…");
+            renderedOnce = true;
+          }else{
+            // Leitor: não pode editar; descarta rascunho para não travar sincronização
+            try{ clearDraft(); }catch(_){ }
+          }
         }
       }catch(_){ }
 
@@ -3837,8 +3843,8 @@ function computeTotals(date,bucket){
         try{
           const remote = await apiGET();
           const sigR = signatureOf(remote);
-          // Se há edição pendente, não sobrescreve
-          if(!dirty){
+          // Se há edição pendente (apenas para quem pode editar), não sobrescreve
+          if(!dirty || !canEdit()){
             if(!lastSig || sigR !== lastSig){
               state = remote;
               lastSig = sigR;
@@ -3846,7 +3852,6 @@ function computeTotals(date,bucket){
               renderCurrentTab();
             }
           }
-          // grava cache
           const payload = { ts: Date.now(), state: remote, sig: sigR };
           const key = cacheKeyOnline();
           if('requestIdleCallback' in window) requestIdleCallback(()=>cacheSet(key, payload).catch(()=>{}), {timeout: 1200});
