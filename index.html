@@ -38,7 +38,6 @@
         var(--bg);
       background-attachment: fixed;
       color:var(--text);
-      font-size:15px;
     }
     body::before{
       content:"";
@@ -52,9 +51,6 @@
       mix-blend-mode: overlay;
     }
     button, input, select, textarea{font:inherit;color:inherit}
-    @media(min-width:1600px){ body{ font-size:16px; } }
-    @media(max-width:720px){ body{ font-size:14px; } }
-
     .app{max-width:1550px;margin:0 auto;padding:18px 16px 28px;}
     .topbar{
       display:flex;gap:12px;align-items:center;justify-content:space-between;
@@ -2468,10 +2464,64 @@ details.panel[open] > summary{margin-bottom:10px}
       return String(h);
     }
 
+
+    function fingerprintForConfirm(st){
+      // Fingerprint robusto para confirmar salvamento:
+      // - ignora updatedAt/createdAt/_rev e não depende de ordenação
+      let h = 2166136261; // FNV-1a 32-bit
+      const add = (v)=>{
+        const s = (v==null ? '' : String(v));
+        for(let i=0;i<s.length;i++){
+          h ^= s.charCodeAt(i);
+          h = Math.imul(h, 16777619) >>> 0;
+        }
+      };
+
+      const items = Array.isArray(st?.items) ? st.items.slice() : [];
+      items.sort((a,b)=> String(a?.id||'').localeCompare(String(b?.id||'')));
+
+      add('i'+items.length);
+      for(const it of items){
+        const notes = String(it?.notes||'');
+        add(it?.id); add(it?.column); add(it?.empresa); add(it?.quality);
+        add(notes.length); add(notes.slice(0,24));
+      }
+
+      const dispatches = Array.isArray(st?.dispatches) ? st.dispatches.slice() : [];
+      dispatches.sort((a,b)=>{
+        const ka = String(a?.date||'')+'|'+String(a?.bucket||'')+'|'+String(a?.operator||'')+'|'+String(a?.code||a?.num||'')+'|'+String(a?.time||'');
+        const kb = String(b?.date||'')+'|'+String(b?.bucket||'')+'|'+String(b?.operator||'')+'|'+String(b?.code||b?.num||'')+'|'+String(b?.time||'');
+        return ka.localeCompare(kb);
+      });
+
+      add('d'+dispatches.length);
+      for(const d of dispatches){
+        add(d?.date); add(d?.bucket); add(d?.operator); add(d?.code||d?.num);
+        add(d?.qty||d?.qtd||d?.count||0);
+      }
+
+      const metas = st?.metas || {};
+      const mkeys = Object.keys(metas).sort();
+      add('m'+mkeys.length);
+      for(const k of mkeys){ add(k); add(metas[k]); }
+
+      const sc = st?.supportConfig || {};
+      const resp = Array.isArray(sc.responsaveis) ? sc.responsaveis.slice().sort() : [];
+      add('r'+resp.length);
+      for(const n of resp){ add(n); }
+
+      return String(h);
+    }
+
+    function isAuthError(e){
+      const m = String((e && e.message) ? e.message : (e || ''));
+      return /sem acesso|unauth|forbidden|token|sess(ão|ao)|login|401|403/i.test(m);
+    }
+
     async function apiGET(){
       // Timeout para não travar a UI com rede ruim
       const ctrl = new AbortController();
-      const t = setTimeout(()=>ctrl.abort(), 12000);
+      const t = setTimeout(()=>ctrl.abort(), 25000);
       try{
         const r = await fetch(API_URL + (API_URL.includes('?')?'&':'?') + 'action=state_get&token=' + encodeURIComponent(auth.token) + '&_ts=' + Date.now() + '&_ts=' + Date.now(), { cache:'no-store', signal: ctrl.signal });
         let j = await r.json();
@@ -2502,15 +2552,38 @@ details.panel[open] > summary{margin-bottom:10px}
       const desiredRev = (payload && payload._rev) ? String(payload._rev) : '';
 
       async function confirmSaved(){
-        // Confirmação mais rápida (sem esperar 3s sempre)
-        const waits = [220, 450, 900, 1500];
+        // Confirmação robusta (Apps Script pode demorar e pode ajustar timestamps/ordem)
+        const desiredFP = fingerprintForConfirm(payload);
+        const waits = [250, 500, 900, 1400, 2000, 2600, 3500];
+        let lastGetErr = null;
+
         for(const w of waits){
           await new Promise(res=>setTimeout(res, w));
-          const remote = await apiGET();
-          if(desiredRev && String(remote._rev||'') === desiredRev) return true;
-          const sigR = signatureOf(remote);
-          if(sigR === desiredSig) return true;
+          let remote = null;
+          try{
+            remote = await apiGET();
+          }catch(err){
+            lastGetErr = err;
+            if(isAuthError(err)) throw err; // força re-login
+            continue;
+          }
+
+          const rrev = (remote && remote._rev!=null) ? String(remote._rev) : '';
+          if(desiredRev && rrev && rrev === desiredRev) return true;
+
+          try{
+            const fpR = fingerprintForConfirm(remote);
+            if(fpR === desiredFP) return true;
+
+            // Se o servidor mudou o _rev mas o conteúdo bate, aceita
+            if(desiredRev && rrev){
+              const dr = Number(desiredRev), rr = Number(rrev);
+              if(!Number.isNaN(dr) && !Number.isNaN(rr) && rr >= dr && fpR === desiredFP) return true;
+            }
+          }catch(_){ }
         }
+
+        if(lastGetErr) throw new Error('Não confirmou salvamento (GET instável).');
         throw new Error('Não confirmou salvamento.');
       }
 
@@ -2522,7 +2595,7 @@ details.panel[open] > summary{margin-bottom:10px}
 
         // 1) no-cors (muito rápido) + confirmação por GET
         try{
-          await fetch(url, { method:"POST", mode:"no-cors", body, keepalive:true });
+          await fetch(url, { method:"POST", mode:"no-cors", body});
           await confirmSaved();
           return true;
         }catch(e){
@@ -2538,9 +2611,7 @@ details.panel[open] > summary{margin-bottom:10px}
               method: "POST",
               headers: { "Content-Type": "text/plain;charset=utf-8" },
               body,
-              signal: ctrl.signal,
-              keepalive: true
-            });
+              signal: ctrl.signal});
           } finally { clearTimeout(t); }
           await confirmSaved();
           return true;
@@ -2665,7 +2736,22 @@ details.panel[open] > summary{margin-bottom:10px}
         }catch(e){
           // NÃO sobrescreve state com remoto (evita perda de dados)
           dirty = true;
-          toast("Falha ao salvar no online. Seus dados ficaram guardados neste navegador (rascunho). Tente novamente.");
+
+          // Garante rascunho local (para não perder nada)
+          try{ persistDraftSoon(); }catch(_){}
+
+          const msg = String((e && e.message) ? e.message : (e || ""));
+          if(isAuthError(e)){
+            toast("Sessão expirada/sem acesso. Faça login novamente para salvar.");
+            try{
+              await ensureAuth();
+              toast("Login ok. Reenviando salvamento…");
+              scheduleSave({ immediate:true, skipTouch:true });
+            }catch(_){ /* usuário cancelou ou falhou */ }
+          }else{
+            const short = msg.length > 140 ? (msg.slice(0,140) + "…") : msg;
+            toast("Falha ao salvar no online. (" + (short||"erro") + ") Seus dados ficaram como rascunho local. Tente novamente.");
+          }
         }finally{
           syncing = false;
           saveInFlight = false;
@@ -3196,17 +3282,7 @@ function computeTotals(date,bucket){
       if(resumoWrap) resumoWrap.innerHTML = "";
 
       const bucketSet = getSelectedBuckets();
-      // Chave de agrupamento (mantém PORT/CLT separados: "3P_PORT" -> "3P PORT")
-      const groupKeyOf = (bucket)=>{
-        const b = normalizeBucket(bucket);
-        const s = String(b||"").trim();
-        return s.includes("_") ? s.replaceAll("_"," ") : s;
-      };
-      const preferredOrder = ["3P CLT","3P PORT","GBR","GBR CLT","M2","2A","VMC"];
-      const orderIndex = (k)=>{
-        const i = preferredOrder.indexOf(k);
-        return i===-1 ? 999 : i;
-      };
+      const empresaOf = (bucket)=> String(bucket||"").split("_")[0]; // GBR_CLT -> GBR
 
       // Agrupa por data respeitando filtros
       const byDate = new Map();
@@ -3230,18 +3306,18 @@ function computeTotals(date,bucket){
       const totalsByEmpresa = (arr)=>{
         const m = new Map();
         for(const it of (arr||[])){
-          const emp = groupKeyOf(it.bucket);
+          const emp = empresaOf(it.bucket);
           m.set(emp, (m.get(emp)||0) + (Number(it.qty)||0));
         }
         return m;
       };
       const totalsToPills = (m)=>{
-        const entries = Array.from(m.entries()).sort((a,b)=> (orderIndex(a[0]) - orderIndex(b[0])) || a[0].localeCompare(b[0]));
+        const entries = Array.from(m.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
         if(!entries.length) return `<span class="muted">Sem programação</span>`;
         return entries.map(([emp,val])=>`<span class="pill"><strong>${escapeHtml(emp)}:</strong> ${Number(val||0)}</span>`).join("");
       };
       const totalsToLine = (m)=>{
-        const entries = Array.from(m.entries()).sort((a,b)=> (orderIndex(a[0]) - orderIndex(b[0])) || a[0].localeCompare(b[0]));
+        const entries = Array.from(m.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
         if(!entries.length) return "Sem programação";
         return entries.map(([emp,val])=>`${emp} ${Number(val||0)}`).join(" • ");
       };
