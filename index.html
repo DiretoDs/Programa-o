@@ -3282,7 +3282,6 @@ function computeTotals(date,bucket){
       if(resumoWrap) resumoWrap.innerHTML = "";
 
       const bucketSet = getSelectedBuckets();
-      const empresaOf = (bucket)=> String(bucket||"").split("_")[0]; // GBR_CLT -> GBR
 
       // Agrupa por data respeitando filtros
       const byDate = new Map();
@@ -3302,24 +3301,35 @@ function computeTotals(date,bucket){
       const tomorrow = addDays(today, 1);
       const focusDates = [today, tomorrow].filter(d=>byDate.has(d));
 
-      // Helpers de soma
-      const totalsByEmpresa = (arr)=>{
+      // Ordem de exibição (chips/resumos) — 3P CLT, 3P PORT, GBR, GBR CLT...
+      const BUCKET_ORDER = ["3P_CLT","3P_PORT","GBR","GBR_CLT","M2_PORT","2A_PORT","VMC_PORT"];
+      const bucketRank = (b)=>{
+        const i = BUCKET_ORDER.indexOf(b);
+        return i === -1 ? 999 : i;
+      };
+
+      // Helpers de soma (por bucket)
+      const totalsByBucket = (arr)=>{
         const m = new Map();
         for(const it of (arr||[])){
-          const emp = empresaOf(it.bucket);
-          m.set(emp, (m.get(emp)||0) + (Number(it.qty)||0));
+          const b = normalizeBucket(it.bucket);
+          m.set(b, (m.get(b)||0) + (Number(it.qty)||0));
         }
         return m;
       };
       const totalsToPills = (m)=>{
-        const entries = Array.from(m.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
+        const entries = Array.from(m.entries())
+          .filter(([,v])=>Number(v||0) !== 0)
+          .sort((a,b)=> bucketRank(a[0]) - bucketRank(b[0]) || a[0].localeCompare(b[0]));
         if(!entries.length) return `<span class="muted">Sem programação</span>`;
-        return entries.map(([emp,val])=>`<span class="pill"><strong>${escapeHtml(emp)}:</strong> ${Number(val||0)}</span>`).join("");
+        return entries.map(([b,val])=>`<span class="pill"><strong>${escapeHtml(bucketLabel(b))}:</strong> ${Number(val||0)}</span>`).join("");
       };
       const totalsToLine = (m)=>{
-        const entries = Array.from(m.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
+        const entries = Array.from(m.entries())
+          .filter(([,v])=>Number(v||0) !== 0)
+          .sort((a,b)=> bucketRank(a[0]) - bucketRank(b[0]) || a[0].localeCompare(b[0]));
         if(!entries.length) return "Sem programação";
-        return entries.map(([emp,val])=>`${emp} ${Number(val||0)}`).join(" • ");
+        return entries.map(([b,val])=>`${bucketLabel(b)} ${Number(val||0)}`).join(" • ");
       };
 
       // Render foco (Hoje/Amanhã) — compacto e objetivo
@@ -3331,7 +3341,7 @@ function computeTotals(date,bucket){
         focusWrap.innerHTML = slots.map(s=>{
           const arr = byDate.get(s.date) || [];
           const total = arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
-          const empTotals = totalsByEmpresa(arr);
+          const bucketTotals = totalsByBucket(arr);
           return `
             <div class="focusCard">
               <div class="d">
@@ -3339,7 +3349,7 @@ function computeTotals(date,bucket){
                 <span class="muted">${arr.length ? (arr.length + " linha(s)") : "—"}</span>
               </div>
               <div class="t">${total ? String(total) : "0"} <span class="muted" style="font-weight:700;font-size:13px">disparos</span></div>
-              <div class="meta">${totalsToPills(empTotals)}</div>
+              <div class="meta">${totalsToPills(bucketTotals)}</div>
             </div>
           `;
         }).join("");
@@ -3359,13 +3369,13 @@ function computeTotals(date,bucket){
         const rows = dates.map(date=>{
           const arr = byDate.get(date) || [];
           const total = arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
-          const empTotals = totalsByEmpresa(arr);
+          const bucketTotals = totalsByBucket(arr);
           const cls = (date===today) ? "rowToday" : (date===tomorrow ? "rowTomorrow" : "");
           return `
             <tr class="${cls}">
               <td style="white-space:nowrap"><b>${escapeHtml(toBR(date))}</b></td>
               <td style="white-space:nowrap"><b>${total}</b></td>
-              <td><div class="empLine">${escapeHtml(totalsToLine(empTotals))}</div></td>
+              <td><div class="empLine">${escapeHtml(totalsToLine(bucketTotals))}</div></td>
             </tr>
           `;
         }).join("");
@@ -3375,7 +3385,7 @@ function computeTotals(date,bucket){
               <tr>
                 <th style="width:140px">Data</th>
                 <th style="width:120px">Total</th>
-                <th>Por empresa</th>
+                <th>Por tipo</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -3390,8 +3400,8 @@ function computeTotals(date,bucket){
         itemCount += arr.length;
         const total = arr.reduce((a,x)=>a+(Number(x.qty)||0),0);
 
-        // Totais por empresa (pra não confundir com produto)
-        const empTotals = totalsByEmpresa(arr);
+        // Totais por tipo (bucket) — 3P CLT / 3P PORT / GBR / GBR CLT ...
+        const bucketTotals = totalsByBucket(arr);
 
         const det = document.createElement("details");
         det.open = focusDates.includes(date);
@@ -3402,8 +3412,8 @@ function computeTotals(date,bucket){
               <div class="muted">${arr.length} linha(s) • Total <b>${total}</b></div>
             </div>
             <div class="summary-right">
-              ${Array.from(empTotals.entries()).sort((a,b)=>a[0].localeCompare(b[0]))
-                .map(([emp,t])=>`<span class="chip"><strong>${escapeHtml(emp)}:</strong> ${Number(t||0)}</span>`).join("")}
+              ${Array.from(bucketTotals.entries()).sort((a,b)=> bucketRank(a[0]) - bucketRank(b[0]) || a[0].localeCompare(b[0]))
+                .map(([b,t])=>`<span class="chip"><strong>${escapeHtml(bucketLabel(b))}:</strong> ${Number(t||0)}</span>`).join("")}
             </div>
           </summary>
         `;
